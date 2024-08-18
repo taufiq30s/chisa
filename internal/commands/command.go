@@ -4,30 +4,36 @@ import (
 	"log"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/taufiq30s/chisa/internal/bot"
+	"github.com/taufiq30s/chisa/internal/music"
 )
 
 var commands []*discordgo.ApplicationCommand
-var commandHandlers map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate)
+var commandHandlers map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate)
 
 func init() {
-	commands = append(commands)
-	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){}
+	commands = append(commands,
+		music.GetCommands()...,
+	)
+	commandHandlers = map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate){
+		"music": music.GetCommandHandlers(),
+	}
 }
 
-func registerHandler(s *discordgo.Session) {
+func registerHandler(chisa *bot.Bot) {
 	log.Println("Registering Command Handles")
-	s.AddHandler(func(c *discordgo.Session, interaction *discordgo.InteractionCreate) {
+	chisa.Session.AddHandler(func(c *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		handle, ok := commandHandlers[interaction.ApplicationCommandData().Name]
 		if ok {
-			handle(s, interaction)
+			handle(chisa, interaction)
 		}
 	})
 }
 
-func Unregister(s *discordgo.Session, guildId *string, registeredCommands []*discordgo.ApplicationCommand) {
+func Unregister(chisa *bot.Bot, guildId *string, registeredCommands []*discordgo.ApplicationCommand) {
 	log.Println("Unregister Commands")
 	for _, command := range registeredCommands {
-		err := s.ApplicationCommandDelete(s.State.User.ID, *guildId, command.ID)
+		err := chisa.Session.ApplicationCommandDelete(chisa.Session.State.User.ID, *guildId, command.ID)
 		if err != nil {
 			log.Fatalf("Failed to delete '%v' command: %v", command.Name, err)
 			break
@@ -35,12 +41,12 @@ func Unregister(s *discordgo.Session, guildId *string, registeredCommands []*dis
 	}
 }
 
-func Register(s *discordgo.Session, guildId *string) {
+func Register(chisa *bot.Bot, guildId *string) {
 	log.Println("Registering Commands")
 	registerCommands := make([]*discordgo.ApplicationCommand, len(commands))
 	isFailed := false
 	for i, command := range commands {
-		cmd, err := s.ApplicationCommandCreate(s.State.User.ID, *guildId, command)
+		cmd, err := chisa.Session.ApplicationCommandCreate(chisa.Session.State.User.ID, *guildId, command)
 		if err != nil {
 			log.Fatalf("Failed to create '%v' command: %v", command.Name, err)
 			log.Fatal("Executing Rollback")
@@ -51,9 +57,9 @@ func Register(s *discordgo.Session, guildId *string) {
 	}
 
 	if isFailed {
-		Unregister(s, guildId, registerCommands)
+		Unregister(chisa, guildId, registerCommands)
 		return
 	}
-	registerHandler(s)
+	registerHandler(chisa)
 	defer log.Println("Registering Commands Successfully")
 }
