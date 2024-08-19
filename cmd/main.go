@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/taufiq30s/chisa/internal/bot"
 	"github.com/taufiq30s/chisa/internal/commands"
+	"github.com/taufiq30s/chisa/internal/cronjob"
 	"github.com/taufiq30s/chisa/utils"
 )
 
@@ -31,14 +32,18 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("Chisa")
+
+	// Open Bot and Spotify connection
 	chisa := bot.New()
 	chisa.Connect(token)
 	chisa.InitializeSpotifyClient()
 
-	fmt.Println("Chisa")
-
 	fmt.Println("Initialized Commands and Events")
 	commands.Register(&chisa, &guildId)
+
+	fmt.Println("Create Cron Job")
+	cronjob.CreateJobs()
 
 	fmt.Println("Bot Started")
 
