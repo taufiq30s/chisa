@@ -19,6 +19,7 @@ func init() {
 	if err != nil {
 		log.Fatalf("Failed to load .env : %s", err)
 	}
+	bot.OpenRedis()
 }
 
 func main() {
@@ -50,5 +51,6 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
+	bot.CloseRedis()
 	defer chisa.Disconnect()
 }

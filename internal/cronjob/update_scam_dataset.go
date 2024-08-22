@@ -9,12 +9,11 @@ import (
 
 func updateScamDataset() {
 	log.Println("Updating scam datasets")
-	redis := bot.OpenRedis()
-	err := moderation.UpdateDataset(redis.Client)
+	redis := bot.GetRedis()
+	err := moderation.UpdateDataset(redis)
 	if err != nil {
 		log.Fatalf("Failed to update dataset: %v", err)
 		return
 	}
 	log.Println("Updated successfully")
-	defer redis.CloseRedis()
 }

@@ -10,14 +10,16 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	go func() {
-		// Open Redis connection
-		client := bot.OpenRedis()
 
-		isScam := moderation.CheckScam(&client, s, m)
-		if isScam {
-			return
+	if len(m.Content) < 10 {
+		return
+	}
+
+	go func() {
+		client := bot.GetRedis()
+		isScam := moderation.CheckScam(client, s, m)
+		if isScam > 0 {
+			moderation.HandleScamMessage(s, m, isScam)
 		}
-		defer client.CloseRedis()
 	}()
 }

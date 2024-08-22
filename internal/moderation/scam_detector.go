@@ -20,13 +20,7 @@ import (
 
 var (
 	DATABSE_SCAM_URLS = "https://raw.githubusercontent.com/Discord-AntiScam/scam-links/main/list.json"
-	SCAM_PATTERNS     = []string{
-		`(?i)free discord nitro`,
-		`(?i)click here`,
-		`(?i)gift for you`,
-	}
-	SUSPECTION_URL = `(?i)discord\.gg\/[a-zA-Z0-9]+`
-	ctx            = context.Background()
+	ctx               = context.Background()
 )
 
 func getLogChannel() string {
@@ -72,42 +66,37 @@ func UpdateDataset(client *redis.Client) error {
 
 // Check message content is spam or not.
 //
-// It will check based on certain keywords and urls. If the message is scam or suspected,
-// the message will be deleted and the user will be given a time out for a day
-// (if suspected) and 7 days if positively scam. Admin can choose to remove
-// the timeout or block it if account cannot be recovered.
-func CheckScam(c *bot.Redis, s *discordgo.Session, m *discordgo.MessageCreate) bool {
+// It will check based on certain keywords and urls.
+//
+// Return:
+//
+//   - 0 if not scam
+//
+//   - 1 if suspect scam (using @everyone or @here)
+//
+//   - 2 if positively scam
+func CheckScam(c *redis.Client, s *discordgo.Session, m *discordgo.MessageCreate) uint8 {
 	isSuspect, isContainScamLink := false, false
-	var (
-		timeout            time.Time
-		scam_message_embed *discordgo.MessageEmbed
-	)
-	logChannel := getLogChannel()
 
 	// Preprocess text before checking
 	re := regexp.MustCompile(`\r?\n`)
 	message := re.ReplaceAllString(m.Content, " ")
-	words := strings.Split(strings.ToLower(message), " ")
+	words := strings.ToLower(message)
 
-	// Check message contains suspect scam
-	for _, pattern := range SCAM_PATTERNS {
-		match, _ := regexp.MatchString(pattern, m.Content)
-		if match {
-			isSuspect = true
-			break
-		}
-	}
-
-	for _, word := range words {
+	// Check message mention @everyone or @here and get urls
+	isSuspect = strings.Contains(words, "@everyone") || strings.Contains(words, "@here")
+	urlPattern := regexp.MustCompile(`(http|https):\/\/[^\s]+`)
+	links := urlPattern.FindAllString(message, -1)
+	for _, link := range links {
 		// Check word is URL or not
-		uri, err := url.ParseRequestURI(word)
+		uri, err := url.ParseRequestURI(link)
 		if err != nil {
 			continue
 		}
 		domain := uri.Hostname()
 
 		// Check domain contains in scam urls
-		isScam, err := c.Client.SIsMember(ctx, "scam_dataset", domain).Result()
+		isScam, err := c.SIsMember(ctx, "scam_dataset", domain).Result()
 		if err != nil {
 			log.Fatalf("Failed to checking redis: %v\n", err)
 		}
@@ -116,37 +105,62 @@ func CheckScam(c *bot.Redis, s *discordgo.Session, m *discordgo.MessageCreate) b
 			break
 		}
 	}
-	if !isContainScamLink && !isSuspect {
-		return false
+	if isSuspect {
+		return 1
+	} else if isContainScamLink {
+		return 2
+	} else {
+		return 0
 	}
-	if isContainScamLink {
-		timeout = time.Now().AddDate(0, 0, 7)
-		scam_message_embed = bot.CreateMessageEmbed(s,
-			"Scam message has detected",
-			fmt.Sprintf(
-				"Scam message detected by account ``%s<@%s>`` with message content"+
-					"\n\n``%s``\n\n"+
-					"The account has been **timeout** for %d days."+
-					"\n\nIf this is not scam, please click **'Not a scam'**", m.Author.GlobalName, m.Author.Username, m.Content, 7),
-			"Anti Scam Detector",
-			bot.SetColor("df0000"),
-		)
-	} else if isSuspect {
-		timeout = time.Now().AddDate(0, 0, 1)
-		scam_message_embed = bot.CreateMessageEmbed(s,
-			"Scam message has detected",
-			fmt.Sprintf(
-				"Suspected scam message detected by account ``%s<@%s>`` with message content"+
-					"\n\n``%s``\n\n"+
-					"The account has been **timeout** for %d day."+
-					"\n\nIf this is not scam, please click **'Not a scam'**", m.Author.GlobalName, m.Author.Username, m.Content, 1),
-			"Anti Scam Detector",
-			bot.SetColor("df0000"),
-		)
+}
+
+// Handle scam meesage
+//
+// The message will be deleted and the user will be given a time out for a day
+// (if suspected) and 7 days if positively scam. Admin can choose to remove
+// the timeout or block it if account cannot be recovered.
+func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code uint8) {
+	var (
+		timeoutDay       int
+		status           string
+		scamMessageEmbed *discordgo.MessageEmbed
+		title            = "Scam message has detected"
+		color            = bot.SetColor("df0000")
+		footer           = "Anti Scam Detector"
+		titleError       = "Error"
+	)
+	logChannel := getLogChannel()
+
+	// Create Message Embed
+	switch code {
+	case 1:
+		timeoutDay = 1
+		status = "Suspected scam"
+	case 2:
+		timeoutDay = 7
+		status = "Scam"
+	default:
+		timeoutDay = 0
 	}
+
+	if timeoutDay == 0 {
+		return
+	}
+	timeout := time.Now().AddDate(0, 0, timeoutDay)
+	scamMessageEmbed = bot.CreateMessageEmbed(s,
+		title,
+		fmt.Sprintf(
+			"%s message detected by account ``%s<@%s>`` with message content"+
+				"\n\n``%s``\n\n"+
+				"The account has been **timeout** for %d day."+
+				"\n\nIf this is not scam, please click **'Not a scam'**",
+			status, m.Author.GlobalName, m.Author.Username, m.Content, timeoutDay),
+		footer,
+		color,
+	)
 	// Send message to log, timeout user and remove spam message
 	_, err := s.ChannelMessageSendComplex(logChannel, &discordgo.MessageSend{
-		Embed: scam_message_embed,
+		Embed: scamMessageEmbed,
 		Components: []discordgo.MessageComponent{
 			discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
@@ -164,18 +178,47 @@ func CheckScam(c *bot.Redis, s *discordgo.Session, m *discordgo.MessageCreate) b
 						},
 						Label:    "Not a Scam",
 						Style:    discordgo.SuccessButton,
-						CustomID: fmt.Sprintf("scam-remove-timeout-%s", "155149108183695360"),
+						CustomID: fmt.Sprintf("scam-remove-timeout-%s", m.Author.ID),
 					},
 				},
 			},
 		},
 	})
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
+		s.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(s,
+			titleError,
+			fmt.Sprintf(
+				"Failed to send message with error \n``%s``",
+				err),
+			footer,
+			color,
+		))
 	}
-	s.GuildMemberTimeout(m.GuildID, "155149108183695360", &timeout)
-	s.ChannelMessageDelete(m.ChannelID, m.ID)
-	return true
+	err = s.GuildMemberTimeout(m.GuildID, m.Author.ID, &timeout)
+	if err != nil {
+		log.Println(err)
+		s.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(s,
+			titleError,
+			fmt.Sprintf(
+				"Failed to timeout with error \n``%s``",
+				err),
+			footer,
+			color,
+		))
+	}
+	err = s.ChannelMessageDelete(m.ChannelID, m.ID)
+	if err != nil {
+		log.Println(err)
+		s.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(s,
+			titleError,
+			fmt.Sprintf(
+				"Failed to remove message with error \n``%s``",
+				err),
+			footer,
+			color,
+		))
+	}
 }
 
 // Get Scam Detector button trigger
@@ -198,7 +241,7 @@ func GetScamButtonHandlers() map[string]func(chisa *bot.Bot, interaction *discor
 				},
 			})
 			if err != nil {
-				log.Fatalln(err)
+				log.Println(err)
 			}
 			chisa.Session.GuildBanCreateWithReason(interaction.GuildID, userId, "Compromise account/indicated scam", 0)
 		},
@@ -218,7 +261,7 @@ func GetScamButtonHandlers() map[string]func(chisa *bot.Bot, interaction *discor
 				},
 			})
 			if err != nil {
-				log.Fatalln(err)
+				log.Println(err)
 			}
 			chisa.Session.GuildMemberTimeout(interaction.GuildID, userId, nil)
 		},

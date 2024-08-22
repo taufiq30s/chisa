@@ -7,33 +7,37 @@ import (
 	"github.com/taufiq30s/chisa/utils"
 )
 
-type Redis struct {
-	Client *redis.Client
-}
+var client *redis.Client
 
-func OpenRedis() Redis {
+// Open redis connection.
+// This client will open 10 pool connections
+func OpenRedis() {
 	log.Println("Opening Redis Connection")
 	defer log.Println("Redis client connected")
 
 	connectionUrl, err := utils.GetEnv("REDIS_URL")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to get env: %s", err)
 	}
 
 	opt, err := redis.ParseURL(connectionUrl)
 	if err != nil {
 		log.Fatalf("Failed to parsing connection string. %s", err)
 	}
-	return Redis{
-		Client: redis.NewClient(opt),
-	}
+	client = redis.NewClient(opt)
 }
 
-func (r *Redis) CloseRedis() {
+// Get Redis
+func GetRedis() *redis.Client {
+	return client
+}
+
+// Close Redis Connection
+func CloseRedis() {
 	log.Println("Closing Redis Connection")
 	defer log.Println("Redis client closed")
 
-	err := r.Client.Close()
+	err := client.Close()
 	if err != nil {
 		log.Fatalf("Failed to close redis connection. %s", err)
 	}
