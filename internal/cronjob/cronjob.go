@@ -21,5 +21,4 @@ func CreateJobs() {
 	if err != nil {
 		log.Fatalf("Failed to create Job: %v", err)
 	}
-	updateScamDataset()
 }

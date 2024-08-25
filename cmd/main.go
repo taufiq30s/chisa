@@ -9,12 +9,13 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/taufiq30s/chisa/internal/bot"
-	"github.com/taufiq30s/chisa/internal/commands"
 	"github.com/taufiq30s/chisa/internal/cronjob"
+	"github.com/taufiq30s/chisa/internal/handlers"
 	"github.com/taufiq30s/chisa/utils"
 )
 
 func init() {
+	fmt.Println("Chisa")
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("Failed to load .env : %s", err)
@@ -33,19 +34,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Chisa")
-
 	// Open Bot and Spotify connection
 	chisa := bot.New()
 	chisa.Connect(token)
 	chisa.InitializeSpotifyClient()
 
 	fmt.Println("Initialized Commands and Events")
-	commands.Register(&chisa, &guildId)
+	handlers.Register(&chisa, &guildId)
 
 	fmt.Println("Create Cron Job")
 	cronjob.CreateJobs()
 
+	// fmt.Println(chisa.Session.State.User.)
 	fmt.Println("Bot Started")
 
 	sc := make(chan os.Signal, 1)
