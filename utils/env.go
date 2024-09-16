@@ -1,14 +1,14 @@
 package utils
 
 import (
-	"errors"
+	"fmt"
 	"os"
 )
 
 func GetEnv(key string) (string, error) {
 	data, found := os.LookupEnv(key)
 	if !found {
-		return "", errors.New("key not found")
+		return "", fmt.Errorf("failed to get env. %s not found", key)
 	}
 	return data, nil
 }
