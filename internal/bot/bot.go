@@ -32,6 +32,7 @@ func (bot *Bot) Connect(token string) {
 }
 
 func (bot *Bot) InitializeSpotifyClient() {
+	log.Println("Connecting to spotify")
 	var err error = nil
 	bot.SpotifySession, err = spotify.New()
 	if err != nil {
