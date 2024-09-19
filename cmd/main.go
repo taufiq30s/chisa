@@ -36,24 +36,30 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Initialize bot and start bot
 	chisa := bot.New()
 	startBot(&chisa, token, guildId)
+
+	// Initialize Spotify client
+	go func() {
+		chisa.InitializeSpotifyClient()
+	}()
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 
 	// Unregister all commands
-	go handlers.UnregisterCommands(&chisa, &guildId)
+	go handlers.Unregister(&chisa, guildId)
 	go bot.CloseRedis()
 	defer chisa.Disconnect()
 }
 
 func startBot(chisa *bot.Bot, token string, guildId string) {
 	var wg sync.WaitGroup
+	wg.Add(3)
 
 	// Open bot connection and register handler
-	wg.Add(1)
 	isBotConnected := make(chan bool)
 	go func() {
 		defer wg.Done()
@@ -61,30 +67,20 @@ func startBot(chisa *bot.Bot, token string, guildId string) {
 		isBotConnected <- true
 	}()
 
-	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-isBotConnected
 		fmt.Println("Initialized Commands and Events")
-		handlers.RegisterCommands(chisa, &guildId)
+		handlers.Register(chisa, guildId)
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		chisa.InitializeSpotifyClient()
-	}()
-
-	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		fmt.Println("Create Cron Job")
 		cronjob.CreateJobs()
 	}()
-
-	// Wait untill all initialization process done
-	// then send message
 	wg.Wait()
+
 	log.Printf("Bot Ready with uptime: %s", time.Now().Format("Mon Jan 2 2006 15:04:05 GMT+0000"))
 	fmt.Println("Bot Ready")
 }
