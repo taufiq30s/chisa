@@ -91,6 +91,7 @@ func playSpotify(state *botState, url string) {
 		state.chisa.Session,
 		state.interaction.Interaction,
 		discordgo.InteractionResponseChannelMessageWithSource,
+		false,
 		messageEmbed,
 	).Execute()
 }

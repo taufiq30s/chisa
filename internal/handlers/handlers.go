@@ -1,8 +1,8 @@
-package commands
+package handlers
 
 import (
 	"log"
-	"maps"
+	"slices"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/taufiq30s/chisa/internal/bot"
@@ -13,20 +13,38 @@ import (
 var (
 	commands        []*discordgo.ApplicationCommand
 	commandHandlers map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate)
-	buttonHandlers  = map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate){}
+	buttonHandlers  map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate)
 )
 
-func init() {
-	commands = append(commands,
-		music.GetCommands()...,
-	)
-	commandHandlers = map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate){
-		"music": music.GetCommandHandlers(),
+func mergeMap(maps ...map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate)) map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate) {
+	merged := make(map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate))
+
+	for _, m := range maps {
+		for key, value := range m {
+			merged[key] = value
+		}
 	}
-	maps.Copy(buttonHandlers, moderation.GetScamButtonHandlers())
+
+	return merged
 }
 
-func getButtonHandlers(id string) (func(chisa *bot.Bot, i *discordgo.InteractionCreate), bool) {
+// Collect all handlers
+func init() {
+	commands = slices.Concat(commands,
+		music.GetCommands(),
+		moderation.VerificationCommands,
+	)
+	commandHandlers = map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate){
+		"music":  music.GetCommandHandlers(),
+		"verify": moderation.VerificationCommandHandlers,
+	}
+	buttonHandlers = mergeMap(
+		moderation.GetScamButtonHandlers(),
+		moderation.VerificationResponseButtonHandle(),
+	)
+}
+
+func registerButtonHandlers(id string) (func(chisa *bot.Bot, i *discordgo.InteractionCreate), bool) {
 	for key := range buttonHandlers {
 		if len(id) >= len(key) && id[:len(key)] == key {
 			return buttonHandlers[key], true
@@ -35,8 +53,8 @@ func getButtonHandlers(id string) (func(chisa *bot.Bot, i *discordgo.Interaction
 	return nil, false
 }
 
-func registerHandler(chisa *bot.Bot) {
-	log.Println("Registering Command Handles")
+func registerHandlers(chisa *bot.Bot) {
+	log.Println("Registering Handlers")
 	chisa.Session.AddHandler(func(c *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		switch interaction.Type {
 		case discordgo.InteractionApplicationCommand:
@@ -46,7 +64,7 @@ func registerHandler(chisa *bot.Bot) {
 		case discordgo.InteractionMessageComponent:
 			switch interaction.MessageComponentData().ComponentType {
 			case discordgo.ButtonComponent:
-				if handle, ok := getButtonHandlers(interaction.MessageComponentData().CustomID); ok {
+				if handle, ok := registerButtonHandlers(interaction.MessageComponentData().CustomID); ok {
 					handle(chisa, interaction)
 				}
 			}
@@ -56,7 +74,7 @@ func registerHandler(chisa *bot.Bot) {
 	chisa.Session.AddHandler(messageCreate)
 }
 
-func Unregister(chisa *bot.Bot, guildId *string, registeredCommands []*discordgo.ApplicationCommand) {
+func unregisterCommands(chisa *bot.Bot, guildId *string, registeredCommands []*discordgo.ApplicationCommand) {
 	log.Println("Unregister Commands")
 	for _, command := range registeredCommands {
 		err := chisa.Session.ApplicationCommandDelete(chisa.Session.State.User.ID, *guildId, command.ID)
@@ -67,7 +85,7 @@ func Unregister(chisa *bot.Bot, guildId *string, registeredCommands []*discordgo
 	}
 }
 
-func Register(chisa *bot.Bot, guildId *string) {
+func RegisterCommands(chisa *bot.Bot, guildId *string) {
 	log.Println("Registering Commands")
 	registerCommands := make([]*discordgo.ApplicationCommand, len(commands))
 	isFailed := false
@@ -83,9 +101,19 @@ func Register(chisa *bot.Bot, guildId *string) {
 	}
 
 	if isFailed {
-		Unregister(chisa, guildId, registerCommands)
+		unregisterCommands(chisa, guildId, registerCommands)
 		return
 	}
-	registerHandler(chisa)
+	registerHandlers(chisa)
 	defer log.Println("Registering Commands Successfully")
+}
+
+func UnregisterCommands(chisa *bot.Bot, guildId *string) {
+	log.Println("Unregistering Commands")
+	commands, err := chisa.Session.ApplicationCommands(chisa.Session.State.User.ID, *guildId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	unregisterCommands(chisa, guildId, commands)
+	defer log.Println("Unregistering Commands Successfully")
 }
