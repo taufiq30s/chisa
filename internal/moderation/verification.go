@@ -137,23 +137,29 @@ func handleVerificationAccept(chisa *bot.Bot, interaction *discordgo.Interaction
 		// When new member is not found or has left the server
 		// before being approved
 		if strings.Contains(err.Error(), "404 Not Found") {
-			verificationErrorResponse(
+			bot.ErrorResponse(
 				chisa.Session,
 				interaction,
-				"Failed to process request",
-				"Sorry, your request failed to process because `member id` not found!",
-			)
+				&bot.ErrorResponseData{
+					Feature:     featureName,
+					Title:       "Failed to process request",
+					Description: "Sorry, your request failed to process because `member id` not found!",
+				},
+			).Execute()
 		}
 		return
 	}
 
 	if slices.Contains(member.Roles, verifiedRoleId) {
-		verificationErrorResponse(
+		bot.ErrorResponse(
 			chisa.Session,
 			interaction,
-			"Failed to process request",
-			"Sorry, this member was verified!",
-		)
+			&bot.ErrorResponseData{
+				Feature:     featureName,
+				Title:       "Failed to process request",
+				Description: "Sorry, this member was verified!",
+			},
+		).Execute()
 		return
 	}
 
@@ -162,14 +168,17 @@ func handleVerificationAccept(chisa *bot.Bot, interaction *discordgo.Interaction
 		err := chisa.Session.GuildMemberRoleAdd(interaction.Interaction.GuildID, memberId, verifiedRoleId)
 		if err != nil {
 			log.Println(err)
-			verificationErrorResponse(
+			bot.ErrorResponse(
 				chisa.Session,
 				interaction,
-				"Failed to process request",
-				fmt.Sprintf(`Sorry, your request failed to process!
-				Detail:
-				%s`, err.Error()),
-			)
+				&bot.ErrorResponseData{
+					Feature: featureName,
+					Title:   "Failed to process request",
+					Description: fmt.Sprintf(`Sorry, your request failed to process!
+					Detail:
+					%s`, err.Error()),
+				},
+			).Execute()
 		}
 		responseEmbed = bot.CreateMessageEmbed(
 			chisa.Session,
@@ -226,12 +235,15 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 		// When new member is not found or has left the server
 		// before being approved
 		if strings.Contains(err.Error(), "404 Not Found") {
-			verificationErrorResponse(
+			bot.ErrorResponse(
 				chisa.Session,
 				interaction,
-				"Failed to process request",
-				"Sorry, your request failed to process because `member id` not found!",
-			)
+				&bot.ErrorResponseData{
+					Feature:     featureName,
+					Title:       "Failed to process request",
+					Description: "Sorry, your request failed to process because `member id` not found!",
+				},
+			).Execute()
 		}
 		return
 	}
@@ -240,14 +252,17 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 	userChannel, err := chisa.Session.UserChannelCreate(memberId)
 	if err != nil {
 		log.Println(err)
-		verificationErrorResponse(
+		bot.ErrorResponse(
 			chisa.Session,
 			interaction,
-			"Failed to process request",
-			fmt.Sprintf(`Sorry, your request failed to process!
-			Detail:
-			%s`, err.Error()),
-		)
+			&bot.ErrorResponseData{
+				Feature: featureName,
+				Title:   "Failed to process request",
+				Description: fmt.Sprintf(`Sorry, your request failed to process!
+				Detail:
+				%s`, err.Error()),
+			},
+		).Execute()
 	}
 
 	// Kick Member
@@ -259,14 +274,17 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 		)
 		if err != nil {
 			log.Println(err)
-			verificationErrorResponse(
+			bot.ErrorResponse(
 				chisa.Session,
 				interaction,
-				"Failed to process request",
-				fmt.Sprintf(`Sorry, your request failed to process!
-				Detail:
-				%s`, err.Error()),
-			)
+				&bot.ErrorResponseData{
+					Feature: featureName,
+					Title:   "Failed to process request",
+					Description: fmt.Sprintf(`Sorry, your request failed to process!
+					Detail:
+					%s`, err.Error()),
+				},
+			).Execute()
 		}
 
 		// Send response to admin
@@ -318,22 +336,4 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 			)
 		}
 	}()
-}
-
-// Handle error and return it as interaction response
-func verificationErrorResponse(s *discordgo.Session, i *discordgo.InteractionCreate, title string, message string) {
-	responseEmbed := bot.CreateMessageEmbed(
-		s,
-		title,
-		message,
-		featureName,
-		bot.SetColor("df0000"),
-	)
-	bot.InteractionResponse(
-		s,
-		i.Interaction,
-		discordgo.InteractionResponseChannelMessageWithSource,
-		false,
-		responseEmbed,
-	).Execute()
 }
