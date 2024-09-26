@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -20,7 +19,7 @@ func init() {
 	fmt.Println("Chisa")
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("Failed to load .env : %s", err)
+		utils.ErrorLog.Fatalf("Failed to load .env : %s\n", err)
 	}
 	go bot.OpenRedis()
 }
@@ -28,12 +27,12 @@ func init() {
 func main() {
 	token, err := utils.GetEnv("BOT_TOKEN")
 	if err != nil {
-		log.Fatal(err)
+		utils.ErrorLog.Fatalln(err)
 	}
 
 	guildId, err := utils.GetEnv("AKASHIC_SERVER_ID")
 	if err != nil {
-		log.Fatal(err)
+		utils.ErrorLog.Fatalln(err)
 	}
 
 	// Initialize bot and start bot
@@ -70,7 +69,7 @@ func startBot(chisa *bot.Bot, token string, guildId string) {
 	go func() {
 		defer wg.Done()
 		<-isBotConnected
-		fmt.Println("Initialized Commands and Events")
+		utils.InfoLog.Println("Initialized Commands and Events")
 		handlers.Register(chisa, guildId)
 	}()
 
@@ -81,6 +80,6 @@ func startBot(chisa *bot.Bot, token string, guildId string) {
 	}()
 	wg.Wait()
 
-	log.Printf("Bot Ready with uptime: %s", time.Now().Format("Mon Jan 2 2006 15:04:05 GMT+0000"))
+	utils.InfoLog.Printf("Bot Ready with uptime: %s", time.Now().Format("Mon Jan 2 2006 15:04:05 GMT+0000"))
 	fmt.Println("Bot Ready")
 }

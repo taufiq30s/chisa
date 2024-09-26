@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -26,7 +25,7 @@ var (
 func getLogChannel() string {
 	logChannel, err := utils.GetEnv("CHISA_LOG_CHANNEL_ID")
 	if err != nil {
-		log.Fatalln(err)
+		utils.ErrorLog.Println(err)
 	}
 	return logChannel
 }
@@ -98,7 +97,7 @@ func CheckScam(c *redis.Client, s *discordgo.Session, m *discordgo.MessageCreate
 		// Check domain contains in scam urls
 		isScam, err := c.SIsMember(ctx, "scam_dataset", domain).Result()
 		if err != nil {
-			log.Fatalf("Failed to checking redis: %v\n", err)
+			utils.ErrorLog.Printf("Failed to checking redis: %v\n", err)
 		}
 		if isScam {
 			isContainScamLink = true
@@ -185,7 +184,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 		},
 	})
 	if err != nil {
-		log.Println(err)
+		utils.ErrorLog.Println(err)
 		s.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(s,
 			titleError,
 			fmt.Sprintf(
@@ -197,7 +196,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 	}
 	err = s.GuildMemberTimeout(m.GuildID, m.Author.ID, &timeout)
 	if err != nil {
-		log.Println(err)
+		utils.ErrorLog.Println(err)
 		s.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(s,
 			titleError,
 			fmt.Sprintf(
@@ -209,7 +208,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 	}
 	err = s.ChannelMessageDelete(m.ChannelID, m.ID)
 	if err != nil {
-		log.Println(err)
+		utils.ErrorLog.Println(err)
 		s.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(s,
 			titleError,
 			fmt.Sprintf(
@@ -241,7 +240,7 @@ func GetScamButtonHandlers() map[string]func(chisa *bot.Bot, interaction *discor
 				},
 			})
 			if err != nil {
-				log.Println(err)
+				utils.ErrorLog.Println(err)
 			}
 			chisa.Session.GuildBanCreateWithReason(interaction.GuildID, userId, "Compromise account/indicated scam", 0)
 		},
@@ -261,7 +260,7 @@ func GetScamButtonHandlers() map[string]func(chisa *bot.Bot, interaction *discor
 				},
 			})
 			if err != nil {
-				log.Println(err)
+				utils.ErrorLog.Println(err)
 			}
 			chisa.Session.GuildMemberTimeout(interaction.GuildID, userId, nil)
 		},

@@ -1,19 +1,18 @@
 package cronjob
 
 import (
-	"log"
-
 	"github.com/taufiq30s/chisa/internal/bot"
 	"github.com/taufiq30s/chisa/internal/moderation"
+	"github.com/taufiq30s/chisa/utils"
 )
 
 func updateScamDataset() {
-	log.Println("Updating scam datasets")
+	utils.InfoLog.Println("Updating scam datasets")
 	redis := bot.GetRedis()
 	err := moderation.UpdateDataset(redis)
 	if err != nil {
-		log.Fatalf("Failed to update dataset: %v", err)
+		utils.ErrorLog.Printf("Failed to update dataset: %v\n", err)
 		return
 	}
-	log.Println("Updated successfully")
+	utils.InfoLog.Println("Updated successfully")
 }

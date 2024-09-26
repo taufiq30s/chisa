@@ -1,21 +1,20 @@
 package handlers
 
 import (
-	"log"
-
 	"github.com/bwmarrin/discordgo"
 	"github.com/taufiq30s/chisa/internal/bot"
+	"github.com/taufiq30s/chisa/utils"
 )
 
 func registerEvents(chisa *bot.Bot) {
-	log.Println("Registering Events")
+	utils.InfoLog.Println("Registering Events")
 	for _, handler := range eventHandlers {
 		chisa.Session.AddHandler(handler)
 	}
 }
 
 func registerButtonHandlers(id string) (func(chisa *bot.Bot, i *discordgo.InteractionCreate), bool) {
-	log.Println("Registering Button Handlers")
+	utils.InfoLog.Println("Registering Button Handlers")
 	for key := range buttonHandlers {
 		if len(id) >= len(key) && id[:len(key)] == key {
 			return buttonHandlers[key], true
@@ -25,7 +24,7 @@ func registerButtonHandlers(id string) (func(chisa *bot.Bot, i *discordgo.Intera
 }
 
 func registerCommandHandlers(chisa *bot.Bot) {
-	log.Println("Registering Command Handlers")
+	utils.InfoLog.Println("Registering Command Handlers")
 	chisa.Session.AddHandler(func(c *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		switch interaction.Type {
 		case discordgo.InteractionApplicationCommand:
@@ -44,14 +43,13 @@ func registerCommandHandlers(chisa *bot.Bot) {
 }
 
 func registerCommand(chisa *bot.Bot, guildId string) {
-	log.Println("Registering Commands")
+	utils.InfoLog.Println("Registering Commands")
 	registerCommands := make([]*discordgo.ApplicationCommand, len(commands))
 	isFailed := false
 	for i, command := range commands {
 		cmd, err := chisa.Session.ApplicationCommandCreate(chisa.Session.State.User.ID, guildId, command)
 		if err != nil {
-			log.Fatalf("Failed to create '%v' command: %v", command.Name, err)
-			log.Fatal("Executing Rollback")
+			utils.ErrorLog.Printf("Failed to create '%v' command: %v\n", command.Name, err)
 			isFailed = true
 			break
 		}
@@ -59,6 +57,7 @@ func registerCommand(chisa *bot.Bot, guildId string) {
 	}
 
 	if isFailed {
+		utils.InfoLog.Println("Executing Rollback")
 		unregisterCommands(chisa, guildId, registerCommands)
 		return
 	}

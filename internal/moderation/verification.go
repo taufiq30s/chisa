@@ -2,7 +2,6 @@ package moderation
 
 import (
 	"fmt"
-	"log"
 	"slices"
 	"strings"
 
@@ -47,7 +46,7 @@ func sendRequestVerificationHandle(chisa *bot.Bot, i *discordgo.InteractionCreat
 
 	err := sendRequestVerificationToAdmin(chisa.Session, i.Member.User, modChannel)
 	if err != nil {
-		log.Println(err)
+		utils.ErrorLog.Println(err)
 		chisa.Session.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(chisa.Session,
 			"Error",
 			fmt.Sprintf(
@@ -114,26 +113,26 @@ func handleVerificationAccept(chisa *bot.Bot, interaction *discordgo.Interaction
 
 	verifiedRoleId, err := utils.GetEnv("AKASHIC_VERIFIED_ROLE_ID")
 	if err != nil {
-		log.Println(err)
+		utils.ErrorLog.Println(err)
 		return
 	}
 
 	welcomeChannelId, err := utils.GetEnv("AKASHIC_WELCOME_CHANNEL_ID")
 	if err != nil {
-		log.Println(err)
+		utils.ErrorLog.Println(err)
 		return
 	}
 
 	ruleChannelId, err := utils.GetEnv("AKASHIC_RULE_CHANNEL_ID")
 	if err != nil {
-		log.Println(err)
+		utils.ErrorLog.Println(err)
 		return
 	}
 
 	// Check member exists
 	member, err := chisa.Session.GuildMember(interaction.Interaction.GuildID, memberId)
 	if err != nil {
-		log.Println(err)
+		utils.ErrorLog.Println(err)
 		// When new member is not found or has left the server
 		// before being approved
 		if strings.Contains(err.Error(), "404 Not Found") {
@@ -167,7 +166,7 @@ func handleVerificationAccept(chisa *bot.Bot, interaction *discordgo.Interaction
 	go func() {
 		err := chisa.Session.GuildMemberRoleAdd(interaction.Interaction.GuildID, memberId, verifiedRoleId)
 		if err != nil {
-			log.Println(err)
+			utils.ErrorLog.Println(err)
 			bot.ErrorResponse(
 				chisa.Session,
 				interaction,
@@ -231,7 +230,7 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 	// Check member exists
 	member, err := chisa.Session.GuildMember(interaction.Interaction.GuildID, memberId)
 	if err != nil {
-		log.Println(err)
+		utils.ErrorLog.Println(err)
 		// When new member is not found or has left the server
 		// before being approved
 		if strings.Contains(err.Error(), "404 Not Found") {
@@ -251,7 +250,7 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 	// Kick rejected new member from server and send him DM)
 	userChannel, err := chisa.Session.UserChannelCreate(memberId)
 	if err != nil {
-		log.Println(err)
+		utils.ErrorLog.Println(err)
 		bot.ErrorResponse(
 			chisa.Session,
 			interaction,
@@ -273,7 +272,7 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 			"Request rejected by admin",
 		)
 		if err != nil {
-			log.Println(err)
+			utils.ErrorLog.Println(err)
 			bot.ErrorResponse(
 				chisa.Session,
 				interaction,
@@ -319,7 +318,7 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 		_, err = chisa.Session.ChannelMessageSendEmbed(
 			userChannel.ID, responseEmbed)
 		if err != nil {
-			log.Println(err)
+			utils.ErrorLog.Println(err)
 			// Send error message
 			responseEmbed = bot.CreateMessageEmbed(
 				chisa.Session,

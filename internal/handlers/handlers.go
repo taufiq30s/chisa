@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"slices"
 
 	"github.com/bwmarrin/discordgo"
@@ -9,6 +8,7 @@ import (
 	"github.com/taufiq30s/chisa/internal/events"
 	"github.com/taufiq30s/chisa/internal/moderation"
 	"github.com/taufiq30s/chisa/internal/music"
+	"github.com/taufiq30s/chisa/utils"
 )
 
 var (
@@ -51,16 +51,18 @@ func init() {
 }
 
 func Register(chisa *bot.Bot, guildId string) {
-	log.Println("Registering Handler")
+	utils.InfoLog.Println("Registering Handler")
+	defer utils.InfoLog.Println("Registering Handlers Successfully")
+
 	registerCommand(chisa, guildId)
 	registerCommandHandlers(chisa)
 	registerEvents(chisa)
-	defer log.Println("Registering Handlers Successfully")
 }
 
 func Unregister(chisa *bot.Bot, guildId string) {
-	log.Println("Unregistering Handler")
+	utils.InfoLog.Println("Unregistering Handler")
+	defer utils.InfoLog.Println("Unregistering Handler Successfully")
+
 	commands = getCommands(chisa, guildId)
 	unregisterCommands(chisa, guildId, commands)
-	defer log.Println("Unregistering Handler Successfully")
 }

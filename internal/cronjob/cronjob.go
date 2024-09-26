@@ -1,15 +1,14 @@
 package cronjob
 
 import (
-	"log"
-
 	"github.com/go-co-op/gocron/v2"
+	"github.com/taufiq30s/chisa/utils"
 )
 
 func CreateJobs() {
 	schedule, err := gocron.NewScheduler()
 	if err != nil {
-		log.Fatalf("Failed to create scheduler: %s", err)
+		utils.ErrorLog.Fatalf("Failed to create scheduler: %s", err)
 	}
 	defer schedule.Start()
 
@@ -19,6 +18,6 @@ func CreateJobs() {
 		gocron.NewTask(updateScamDataset),
 	)
 	if err != nil {
-		log.Fatalf("Failed to create Job: %v", err)
+		utils.ErrorLog.Fatalf("Failed to create Job: %v", err)
 	}
 }
