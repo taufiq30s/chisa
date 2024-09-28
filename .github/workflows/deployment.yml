@@ -21,7 +21,7 @@ jobs:
         go-version: '1.20'
     
     - name: Build the image
-      run: docker build . --file Dockerfile --tag chisa:$(date +%s)
+      run: docker build . --file Dockerfile --tag chisa:latest
     
     - name: Prepare SSH Key
       run: |
@@ -40,7 +40,7 @@ jobs:
 
     - name: Upload image to VPS
       run: |
-        scp -P ${{ secrets.VPS_PORT }} -o ./chisa.tar ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DESTINATION }}/chisa.tar
+        scp -P ${{ secrets.VPS_PORT }} ./chisa.tar ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DESTINATION }}/chisa.tar
       shell: bash
     
   deploy:
@@ -62,6 +62,6 @@ jobs:
     
     - name: Load image and run container on VPS
       run: |
-        ssh -o ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} -p ${{ secrets.VPS_PORT }} \
+        ssh ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} -p ${{ secrets.VPS_PORT }} \
         "docker load -i ${{ secrets.VPS_DESTINATION }}/chisa.tar && docker run -d --name chisa-dc --env-file ${{ secrets.CHISA_ENV }} chisa:latest"
       shell: bash

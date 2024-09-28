@@ -21,7 +21,7 @@ jobs:
         go-version: '1.20'
     
     - name: Build the image
-      run: docker build . --file Dockerfile --tag chisa:$(date +%s)
+      run: docker build . --file Dockerfile --tag chisa:dev
     
     - name: Prepare SSH Key
       run: |
@@ -36,15 +36,15 @@ jobs:
       shell: bash
 
     - name: Export image
-      run: docker save chisa:latest -o chisa-test.tar
+      run: docker save chisa:dev -o chisa-dev.tar
 
     - name: Upload image to VPS
       run: |
-        scp -P ${{ secrets.VPS_PORT }} -o ./chisa.tar ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DESTINATION }}/chisa.tar
+        scp -P ${{ secrets.VPS_PORT }} ./chisa-dev.tar ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DESTINATION }}/chisa-dev.tar
       shell: bash
     
     - name: Remove testing image file from VPS
       run: |
-        ssh -o ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} -p ${{ secrets.VPS_PORT }} \
-        "rm ${{ secrets.VPS_DESTINATION }}/chisa.tar"
+        ssh ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} -p ${{ secrets.VPS_PORT }} \
+        "rm ${{ secrets.VPS_DESTINATION }}/chisa-dev.tar"
       shell: bash
