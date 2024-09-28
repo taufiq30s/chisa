@@ -1,10 +1,10 @@
-FROM golang:1.21 as builder
+FROM golang:1.23 AS builder
 
 WORKDIR /app
 
 ## Copy master and install that packages
 COPY . .
-RUN go.mod download
+RUN go mod download
 
 ## Copy master then build in arm based processor
 RUN env GOOS=linux GOARCH=arm64 go build -v -o chisa cmd/main.go
@@ -15,7 +15,7 @@ FROM alpine:latest
 WORKDIR /app
 
 ## Copy the compiled Go binary from the builder stage
-COPY --from=builder /app/app .
+COPY --from=builder /app .
 
 ## Run Chisa
 CMD ["./chisa"]
