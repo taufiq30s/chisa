@@ -1,56 +1,85 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/taufiq30s/chisa/internal/bot"
-	"github.com/taufiq30s/chisa/internal/commands"
+	"github.com/taufiq30s/chisa/internal/cronjob"
+	"github.com/taufiq30s/chisa/internal/handlers"
+	"github.com/taufiq30s/chisa/utils"
 )
 
 func init() {
+	fmt.Println("Chisa")
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("Failed to load .env : %s", err)
+		utils.ErrorLog.Fatalf("Failed to load .env : %s\n", err)
 	}
-}
-
-func getEnv(key string) (string, error) {
-	data, found := os.LookupEnv(key)
-	if !found {
-		return "", errors.New("key not found")
-	}
-	return data, nil
+	go bot.OpenRedis()
 }
 
 func main() {
-	token, err := getEnv("BOT_TOKEN")
+	token, err := utils.GetEnv("BOT_TOKEN")
 	if err != nil {
-		log.Fatal(err)
+		utils.ErrorLog.Fatalln(err)
 	}
 
-	guildId, err := getEnv("AKASHIC_SERVER_ID")
+	guildId, err := utils.GetEnv("AKASHIC_SERVER_ID")
 	if err != nil {
-		log.Fatal(err)
+		utils.ErrorLog.Fatalln(err)
 	}
 
+	// Initialize bot and start bot
 	chisa := bot.New()
-	chisa.Connect(token)
+	startBot(&chisa, token, guildId)
 
-	fmt.Println("Chisa")
-
-	fmt.Println("Initialized Commands and Events")
-	commands.Register(chisa.Session, &guildId)
-
-	fmt.Println("Bot Started")
+	// Initialize Spotify client
+	go func() {
+		chisa.InitializeSpotifyClient()
+	}()
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 
+	// Unregister all commands
+	go handlers.Unregister(&chisa, guildId)
+	go bot.CloseRedis()
+	defer chisa.Disconnect()
+}
+
+func startBot(chisa *bot.Bot, token string, guildId string) {
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	// Open bot connection and register handler
+	isBotConnected := make(chan bool)
+	go func() {
+		defer wg.Done()
+		chisa.Connect(token)
+		isBotConnected <- true
+	}()
+
+	go func() {
+		defer wg.Done()
+		<-isBotConnected
+		utils.InfoLog.Println("Initialized Commands and Events")
+		handlers.Register(chisa, guildId)
+	}()
+
+	go func() {
+		defer wg.Done()
+		fmt.Println("Create Cron Job")
+		cronjob.CreateJobs()
+	}()
+	wg.Wait()
+
+	utils.InfoLog.Printf("Bot Ready with uptime: %s", time.Now().Format("Mon Jan 2 2006 15:04:05 GMT+0000"))
+	fmt.Println("Bot Ready")
 }
