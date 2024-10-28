@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/taufiq30s/chisa/internal/bot"
+	"github.com/taufiq30s/chisa/internal/responses"
 	"github.com/taufiq30s/chisa/utils"
 )
 
@@ -47,27 +48,27 @@ func sendRequestVerificationHandle(chisa *bot.Bot, i *discordgo.InteractionCreat
 	err := sendRequestVerificationToAdmin(chisa.Session, i.Member.User, modChannel)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		chisa.Session.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(chisa.Session,
+		chisa.Session.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(chisa.Session,
 			"Error",
 			fmt.Sprintf(
 				"Failed to send message with error \n``%s``",
 				err),
 			"Moderation",
-			bot.SetColor("df0000"),
+			responses.SetColor("df0000"),
 		))
 	}
 
-	bot.InteractionResponse(chisa.Session, i.Interaction, discordgo.InteractionResponseChannelMessageWithSource, true, bot.CreateMessageEmbed(
+	responses.InteractionResponse(chisa.Session, i.Interaction, discordgo.InteractionResponseChannelMessageWithSource, true, responses.CreateMessageEmbed(
 		chisa.Session,
 		"Verification Request Sent",
 		"You request has been sent to moderator and we will process it.",
 		featureName,
-		bot.SetColor("0bdd47"),
+		responses.SetColor("0bdd47"),
 	)).Execute()
 }
 
 func sendRequestVerificationToAdmin(s *discordgo.Session, newMember *discordgo.User, modChannel string) error {
-	requestMessageEmbed := bot.CreateMessageEmbed(
+	requestMessageEmbed := responses.CreateMessageEmbed(
 		s,
 		featureName,
 		fmt.Sprintf(
@@ -75,7 +76,7 @@ func sendRequestVerificationToAdmin(s *discordgo.Session, newMember *discordgo.U
 			newMember.GlobalName, newMember.Username,
 		),
 		featureName,
-		bot.SetColor("0bdd47"),
+		responses.SetColor("0bdd47"),
 	)
 	_, err := s.ChannelMessageSendComplex(modChannel, &discordgo.MessageSend{
 		Embed: requestMessageEmbed,
@@ -136,10 +137,10 @@ func handleVerificationAccept(chisa *bot.Bot, interaction *discordgo.Interaction
 		// When new member is not found or has left the server
 		// before being approved
 		if strings.Contains(err.Error(), "404 Not Found") {
-			bot.ErrorResponse(
+			responses.ErrorResponse(
 				chisa.Session,
 				interaction,
-				&bot.ErrorResponseData{
+				&responses.ErrorResponseData{
 					Feature:     featureName,
 					Title:       "Failed to process request",
 					Description: "Sorry, your request failed to process because `member id` not found!",
@@ -150,10 +151,10 @@ func handleVerificationAccept(chisa *bot.Bot, interaction *discordgo.Interaction
 	}
 
 	if slices.Contains(member.Roles, verifiedRoleId) {
-		bot.ErrorResponse(
+		responses.ErrorResponse(
 			chisa.Session,
 			interaction,
-			&bot.ErrorResponseData{
+			&responses.ErrorResponseData{
 				Feature:     featureName,
 				Title:       "Failed to process request",
 				Description: "Sorry, this member was verified!",
@@ -167,10 +168,10 @@ func handleVerificationAccept(chisa *bot.Bot, interaction *discordgo.Interaction
 		err := chisa.Session.GuildMemberRoleAdd(interaction.Interaction.GuildID, memberId, verifiedRoleId)
 		if err != nil {
 			utils.ErrorLog.Println(err)
-			bot.ErrorResponse(
+			responses.ErrorResponse(
 				chisa.Session,
 				interaction,
-				&bot.ErrorResponseData{
+				&responses.ErrorResponseData{
 					Feature: featureName,
 					Title:   "Failed to process request",
 					Description: fmt.Sprintf(`Sorry, your request failed to process!
@@ -179,18 +180,18 @@ func handleVerificationAccept(chisa *bot.Bot, interaction *discordgo.Interaction
 				},
 			).Execute()
 		}
-		responseEmbed = bot.CreateMessageEmbed(
+		responseEmbed = responses.CreateMessageEmbed(
 			chisa.Session,
 			"Accepted New Member Success",
 			fmt.Sprintf(
 				"%s has been processed to get channel access and assign “verified” role.",
 				member.User.GlobalName),
 			featureName,
-			bot.SetColor("0bdd47"),
+			responses.SetColor("0bdd47"),
 		)
 
 		// Send response to moderator
-		bot.InteractionResponse(
+		responses.InteractionResponse(
 			chisa.Session,
 			interaction.Interaction,
 			discordgo.InteractionResponseChannelMessageWithSource,
@@ -201,7 +202,7 @@ func handleVerificationAccept(chisa *bot.Bot, interaction *discordgo.Interaction
 
 	// Send welcome message to new member in "welcome" channel
 	go func() {
-		responseEmbed = bot.CreateMessageEmbed(
+		responseEmbed = responses.CreateMessageEmbed(
 			chisa.Session,
 			fmt.Sprintf("Welcome to %s", chisa.Session.State.Guilds[0].Name),
 			fmt.Sprintf(`Hello <@%s>, welcome to %s.
@@ -210,7 +211,7 @@ func handleVerificationAccept(chisa *bot.Bot, interaction *discordgo.Interaction
 				memberId, chisa.Session.State.Guilds[0].Name, ruleChannelId,
 			),
 			featureName,
-			bot.SetColor("0bdd47"),
+			responses.SetColor("0bdd47"),
 		)
 
 		chisa.Session.ChannelMessageSendEmbed(
@@ -234,10 +235,10 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 		// When new member is not found or has left the server
 		// before being approved
 		if strings.Contains(err.Error(), "404 Not Found") {
-			bot.ErrorResponse(
+			responses.ErrorResponse(
 				chisa.Session,
 				interaction,
-				&bot.ErrorResponseData{
+				&responses.ErrorResponseData{
 					Feature:     featureName,
 					Title:       "Failed to process request",
 					Description: "Sorry, your request failed to process because `member id` not found!",
@@ -251,10 +252,10 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 	userChannel, err := chisa.Session.UserChannelCreate(memberId)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		bot.ErrorResponse(
+		responses.ErrorResponse(
 			chisa.Session,
 			interaction,
-			&bot.ErrorResponseData{
+			&responses.ErrorResponseData{
 				Feature: featureName,
 				Title:   "Failed to process request",
 				Description: fmt.Sprintf(`Sorry, your request failed to process!
@@ -273,10 +274,10 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 		)
 		if err != nil {
 			utils.ErrorLog.Println(err)
-			bot.ErrorResponse(
+			responses.ErrorResponse(
 				chisa.Session,
 				interaction,
-				&bot.ErrorResponseData{
+				&responses.ErrorResponseData{
 					Feature: featureName,
 					Title:   "Failed to process request",
 					Description: fmt.Sprintf(`Sorry, your request failed to process!
@@ -287,16 +288,16 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 		}
 
 		// Send response to admin
-		responseEmbed = bot.CreateMessageEmbed(
+		responseEmbed = responses.CreateMessageEmbed(
 			chisa.Session,
 			"Rejected New Member Success",
 			fmt.Sprintf(
 				"%s has been rejected and kicked from server.",
 				member.User.GlobalName),
 			featureName,
-			bot.SetColor("df0000"),
+			responses.SetColor("df0000"),
 		)
-		bot.InteractionResponse(
+		responses.InteractionResponse(
 			chisa.Session,
 			interaction.Interaction,
 			discordgo.InteractionResponseChannelMessageWithSource,
@@ -307,27 +308,27 @@ func handleVerificationReject(chisa *bot.Bot, interaction *discordgo.Interaction
 
 	// Send DM to rejected member
 	go func() {
-		responseEmbed = bot.CreateMessageEmbed(
+		responseEmbed = responses.CreateMessageEmbed(
 			chisa.Session,
 			"Verification Rejected",
 			`Sorry, your request was rejected!
 			Please contact the source of the invitation link for further confirmation`,
 			featureName,
-			bot.SetColor("df0000"),
+			responses.SetColor("df0000"),
 		)
 		_, err = chisa.Session.ChannelMessageSendEmbed(
 			userChannel.ID, responseEmbed)
 		if err != nil {
 			utils.ErrorLog.Println(err)
 			// Send error message
-			responseEmbed = bot.CreateMessageEmbed(
+			responseEmbed = responses.CreateMessageEmbed(
 				chisa.Session,
 				"Failed to send DM",
 				fmt.Sprintf(`Sorry, your request failed to process!
 				Detail:
 				%s`, err.Error()),
 				featureName,
-				bot.SetColor("df0000"),
+				responses.SetColor("df0000"),
 			)
 			chisa.Session.ChannelMessageSendEmbed(
 				interaction.Interaction.ChannelID,

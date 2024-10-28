@@ -14,6 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/redis/go-redis/v9"
 	"github.com/taufiq30s/chisa/internal/bot"
+	"github.com/taufiq30s/chisa/internal/responses"
 	"github.com/taufiq30s/chisa/utils"
 )
 
@@ -124,7 +125,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 		status           string
 		scamMessageEmbed *discordgo.MessageEmbed
 		title            = "Scam message has detected"
-		color            = bot.SetColor("df0000")
+		color            = responses.SetColor("df0000")
 		footer           = "Anti Scam Detector"
 		titleError       = "Error"
 	)
@@ -146,7 +147,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 		return
 	}
 	timeout := time.Now().AddDate(0, 0, timeoutDay)
-	scamMessageEmbed = bot.CreateMessageEmbed(s,
+	scamMessageEmbed = responses.CreateMessageEmbed(s,
 		title,
 		fmt.Sprintf(
 			"%s message detected by account ``%s<@%s>`` with message content"+
@@ -185,7 +186,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 	})
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		s.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(s,
+		s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
 			titleError,
 			fmt.Sprintf(
 				"Failed to send message with error \n``%s``",
@@ -197,7 +198,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 	err = s.GuildMemberTimeout(m.GuildID, m.Author.ID, &timeout)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		s.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(s,
+		s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
 			titleError,
 			fmt.Sprintf(
 				"Failed to timeout with error \n``%s``",
@@ -209,7 +210,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 	err = s.ChannelMessageDelete(m.ChannelID, m.ID)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		s.ChannelMessageSendEmbed(logChannel, bot.CreateMessageEmbed(s,
+		s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
 			titleError,
 			fmt.Sprintf(
 				"Failed to remove message with error \n``%s``",
@@ -229,12 +230,12 @@ func GetScamButtonHandlers() map[string]func(chisa *bot.Bot, interaction *discor
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Embeds: []*discordgo.MessageEmbed{
-						bot.CreateMessageEmbed(chisa.Session,
+						responses.CreateMessageEmbed(chisa.Session,
 							"Ban Successful",
 							fmt.Sprintf(
 								"<@%s> has been banned.", userId),
 							"Moderation",
-							bot.SetColor("0bdd47"),
+							responses.SetColor("0bdd47"),
 						),
 					},
 				},
@@ -250,11 +251,11 @@ func GetScamButtonHandlers() map[string]func(chisa *bot.Bot, interaction *discor
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Embeds: []*discordgo.MessageEmbed{
-						bot.CreateMessageEmbed(chisa.Session,
+						responses.CreateMessageEmbed(chisa.Session,
 							"Remove timeout successful",
 							"Timeout removed.",
 							"Moderation",
-							bot.SetColor("0bdd47"),
+							responses.SetColor("0bdd47"),
 						),
 					},
 				},

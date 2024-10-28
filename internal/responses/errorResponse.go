@@ -1,4 +1,4 @@
-package bot
+package responses
 
 import "github.com/bwmarrin/discordgo"
 
