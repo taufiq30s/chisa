@@ -6,7 +6,7 @@ import (
 	"github.com/taufiq30s/chisa/internal/moderation"
 )
 
-func MessageCreate() func(s *discordgo.Session, m *discordgo.MessageCreate) {
+func MessageCreate(chisa *bot.Bot) interface{} {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if m.Author.ID == s.State.User.ID {
 			return
@@ -17,7 +17,7 @@ func MessageCreate() func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		go func() {
-			client := bot.GetRedis()
+			client := chisa.Redis
 			isScam := moderation.CheckScam(client, s, m)
 			if isScam > 0 {
 				moderation.HandleScamMessage(s, m, isScam)

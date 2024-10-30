@@ -9,11 +9,12 @@ import (
 func registerEvents(chisa *bot.Bot) {
 	utils.InfoLog.Println("Registering Events")
 	for _, handler := range eventHandlers {
-		chisa.Session.AddHandler(handler)
+		fn := handler(chisa)
+		chisa.Session.AddHandler(fn)
 	}
 }
 
-func registerButtonHandlers(id string) (func(chisa *bot.Bot, i *discordgo.InteractionCreate), bool) {
+func registerButtonHandlers(id string) (func(s *discordgo.Session, i *discordgo.InteractionCreate), bool) {
 	utils.InfoLog.Println("Registering Button Handlers")
 	for key := range buttonHandlers {
 		if len(id) >= len(key) && id[:len(key)] == key {
@@ -35,7 +36,7 @@ func registerCommandHandlers(chisa *bot.Bot) {
 			switch interaction.MessageComponentData().ComponentType {
 			case discordgo.ButtonComponent:
 				if handle, ok := registerButtonHandlers(interaction.MessageComponentData().CustomID); ok {
-					handle(chisa, interaction)
+					handle(chisa.Session, interaction)
 				}
 			}
 		}
@@ -47,13 +48,13 @@ func registerCommand(chisa *bot.Bot, guildId string) {
 	registerCommands := make([]*discordgo.ApplicationCommand, len(commands))
 	isFailed := false
 	for i, command := range commands {
-		cmd, err := chisa.Session.ApplicationCommandCreate(chisa.Session.State.User.ID, guildId, command)
+		bot, err := chisa.Session.ApplicationCommandCreate(chisa.Session.State.User.ID, guildId, command)
 		if err != nil {
 			utils.ErrorLog.Printf("Failed to create '%v' command: %v\n", command.Name, err)
 			isFailed = true
 			break
 		}
-		registerCommands[i] = cmd
+		registerCommands[i] = bot
 	}
 
 	if isFailed {

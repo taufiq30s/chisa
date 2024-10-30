@@ -7,11 +7,9 @@ import (
 	"github.com/taufiq30s/chisa/utils"
 )
 
-var client *redis.Client
-
-// Open redis connection.
+// Open Redis connection.
 // This client will open 10 pool connections
-func OpenRedis() {
+func (chisa *Bot) OpenRedis() {
 	ctx := context.Background()
 	utils.InfoLog.Println("Opening Redis Connection")
 	defer utils.InfoLog.Println("Redis client connected")
@@ -25,24 +23,19 @@ func OpenRedis() {
 	if err != nil {
 		utils.ErrorLog.Fatalf("Failed to parsing connection string. %s\n", err)
 	}
-	client = redis.NewClient(opt)
-	if err := client.Ping(ctx).Err(); err != nil {
-		utils.ErrorLog.Fatalf("Failed to connect redis. %s\n", err)
+	chisa.Redis = redis.NewClient(opt)
+	if err := chisa.Redis.Ping(ctx).Err(); err != nil {
+		utils.ErrorLog.Fatalf("Failed to connect Redis. %s\n", err)
 	}
 }
 
-// Get Redis
-func GetRedis() *redis.Client {
-	return client
-}
-
 // Close Redis Connection
-func CloseRedis() {
+func (chisa *Bot) CloseRedis() {
 	utils.InfoLog.Println("Closing Redis Connection")
 	defer utils.InfoLog.Println("Redis client closed")
 
-	err := client.Close()
+	err := chisa.Redis.Close()
 	if err != nil {
-		utils.ErrorLog.Fatalf("Failed to close redis connection. %s", err)
+		utils.ErrorLog.Fatalf("Failed to close Redis connection. %s", err)
 	}
 }

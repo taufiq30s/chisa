@@ -4,16 +4,15 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
-	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/taufiq30s/chisa/internal/bot"
-	"github.com/taufiq30s/chisa/internal/cronjob"
 	"github.com/taufiq30s/chisa/internal/handlers"
 	"github.com/taufiq30s/chisa/utils"
 )
+
+var chisa bot.Bot
 
 func init() {
 	fmt.Println("Chisa")
@@ -21,7 +20,8 @@ func init() {
 	if err != nil {
 		utils.ErrorLog.Fatalf("Failed to load .env : %s\n", err)
 	}
-	go bot.OpenRedis()
+	chisa = bot.Bot{}
+	go chisa.OpenRedis()
 }
 
 func main() {
@@ -35,51 +35,24 @@ func main() {
 		utils.ErrorLog.Fatalln(err)
 	}
 
+	youtubeAPIKey, err := utils.GetEnv("YOUTUBE_API_KEY")
+	if err != nil {
+		utils.ErrorLog.Fatalln(err)
+	}
+
 	// Initialize bot and start bot
-	chisa := bot.New()
-	startBot(&chisa, token, guildId)
+	chisa.Start(token, guildId)
 
 	// Initialize Spotify client
-	go func() {
-		chisa.InitializeSpotifyClient()
-	}()
+	go chisa.InitializeMusicClient(youtubeAPIKey)
+
+	go handlers.Register(&chisa, guildId)
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 
 	// Unregister all commands
-	go handlers.Unregister(&chisa, guildId)
-	go bot.CloseRedis()
+	go chisa.CloseRedis()
 	defer chisa.Disconnect()
-}
-
-func startBot(chisa *bot.Bot, token string, guildId string) {
-	var wg sync.WaitGroup
-	wg.Add(3)
-
-	// Open bot connection and register handler
-	isBotConnected := make(chan bool)
-	go func() {
-		defer wg.Done()
-		chisa.Connect(token)
-		isBotConnected <- true
-	}()
-
-	go func() {
-		defer wg.Done()
-		<-isBotConnected
-		utils.InfoLog.Println("Initialized Commands and Events")
-		handlers.Register(chisa, guildId)
-	}()
-
-	go func() {
-		defer wg.Done()
-		fmt.Println("Create Cron Job")
-		cronjob.CreateJobs()
-	}()
-	wg.Wait()
-
-	utils.InfoLog.Printf("Bot Ready with uptime: %s", time.Now().Format("Mon Jan 2 2006 15:04:05 GMT+0000"))
-	fmt.Println("Bot Ready")
 }

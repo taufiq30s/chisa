@@ -13,7 +13,6 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/redis/go-redis/v9"
-	"github.com/taufiq30s/chisa/internal/bot"
 	"github.com/taufiq30s/chisa/internal/responses"
 	"github.com/taufiq30s/chisa/utils"
 )
@@ -21,6 +20,47 @@ import (
 var (
 	DATABSE_SCAM_URLS = "https://raw.githubusercontent.com/Discord-AntiScam/scam-links/main/list.json"
 	ctx               = context.Background()
+	BanScammerHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Embeds: []*discordgo.MessageEmbed{
+					responses.CreateMessageEmbed(s,
+						"Ban Successful",
+						fmt.Sprintf(
+							"<@%s> has been banned.", userId),
+						"Moderation",
+						responses.SetColor("0bdd47"),
+					),
+				},
+			},
+		})
+		if err != nil {
+			utils.ErrorLog.Println(err)
+		}
+		s.GuildBanCreateWithReason(i.GuildID, userId, "Compromise account/indicated scam", 0)
+	}
+	RemoveSuspectHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Embeds: []*discordgo.MessageEmbed{
+					responses.CreateMessageEmbed(s,
+						"Remove timeout successful",
+						"Timeout removed.",
+						"Moderation",
+						responses.SetColor("0bdd47"),
+					),
+				},
+			},
+		})
+		if err != nil {
+			utils.ErrorLog.Println(err)
+		}
+		s.GuildMemberTimeout(i.GuildID, userId, nil)
+	}
 )
 
 func getLogChannel() string {
@@ -218,52 +258,5 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 			footer,
 			color,
 		))
-	}
-}
-
-// Get Scam Detector button trigger
-func GetScamButtonHandlers() map[string]func(chisa *bot.Bot, interaction *discordgo.InteractionCreate) {
-	return map[string]func(chisa *bot.Bot, interaction *discordgo.InteractionCreate){
-		"scam-ban": func(chisa *bot.Bot, interaction *discordgo.InteractionCreate) {
-			userId := interaction.MessageComponentData().CustomID[strings.LastIndex(interaction.MessageComponentData().CustomID, "-")+1:]
-			err := chisa.Session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{
-						responses.CreateMessageEmbed(chisa.Session,
-							"Ban Successful",
-							fmt.Sprintf(
-								"<@%s> has been banned.", userId),
-							"Moderation",
-							responses.SetColor("0bdd47"),
-						),
-					},
-				},
-			})
-			if err != nil {
-				utils.ErrorLog.Println(err)
-			}
-			chisa.Session.GuildBanCreateWithReason(interaction.GuildID, userId, "Compromise account/indicated scam", 0)
-		},
-		"scam-remove-timeout": func(chisa *bot.Bot, interaction *discordgo.InteractionCreate) {
-			userId := interaction.MessageComponentData().CustomID[strings.LastIndex(interaction.MessageComponentData().CustomID, "-")+1:]
-			err := chisa.Session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{
-						responses.CreateMessageEmbed(chisa.Session,
-							"Remove timeout successful",
-							"Timeout removed.",
-							"Moderation",
-							responses.SetColor("0bdd47"),
-						),
-					},
-				},
-			})
-			if err != nil {
-				utils.ErrorLog.Println(err)
-			}
-			chisa.Session.GuildMemberTimeout(interaction.GuildID, userId, nil)
-		},
 	}
 }
