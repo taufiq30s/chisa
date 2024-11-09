@@ -40,14 +40,13 @@ func newMusicTrack(track *lavalink.Track, username string) trackInfo {
 }
 
 type MusicBot struct {
-	Client                   disgolink.Client
-	queue                    []trackState
-	nodes                    []disgolink.NodeConfig
-	player                   disgolink.Player
-	searchResults            map[string]*searchResultState
-	session                  *discordgo.Session
-	featureName              string
-	supportedPlatformsPrefix map[string][]string
+	Client        disgolink.Client
+	queue         []trackState
+	nodes         []disgolink.NodeConfig
+	player        disgolink.Player
+	searchResults map[string]*searchResultState
+	session       *discordgo.Session
+	featureName   string
 }
 
 func New(s *discordgo.Session, botId string, guildId string) *MusicBot {
@@ -63,17 +62,6 @@ func New(s *discordgo.Session, botId string, guildId string) *MusicBot {
 		player:        player,
 		session:       s,
 		featureName:   "Chisa Music Player",
-		supportedPlatformsPrefix: map[string][]string{
-			"youtube": {
-				"https://youtube.com/",
-				"https://www.youtube.com/",
-				"https://www.youtube.com/shorts/",
-				"https://youtu.be/",
-			},
-			"spotify": {
-				"https://open.spotify.com",
-			},
-		},
 	}
 }
 

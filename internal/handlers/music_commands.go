@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/disgoorg/disgolink/v3/lavalink"
@@ -72,9 +74,32 @@ var (
 )
 
 func parseIdentifier(data string) string {
-	_, err := url.ParseRequestURI(data)
+	parsedURL, err := url.ParseRequestURI(data)
 	if err != nil {
 		return lavalink.SearchTypeYouTube.Apply(data)
+	}
+
+	// Handle YouTube URLs
+	if strings.Contains(parsedURL.Host, "youtube.com") || strings.Contains(parsedURL.Host, "youtu.be") {
+		if parsedURL.Host == "youtu.be" {
+			return fmt.Sprintf("https://youtu.be/%s", strings.Trim(parsedURL.Path, "/"))
+		}
+		if parsedURL.Path == "/watch" && parsedURL.Query().Has("v") {
+			return fmt.Sprintf("https://www.youtube.com/watch?v=%s", parsedURL.Query().Get("v"))
+		}
+		videoID := strings.Trim(parsedURL.Path, "/")
+		if strings.HasPrefix(parsedURL.Path, "/embed/") {
+			return fmt.Sprintf("https://www.youtube.com/embed/%s", strings.TrimPrefix(videoID, "embed/"))
+		}
+		if strings.HasPrefix(parsedURL.Path, "/v/") {
+			return fmt.Sprintf("https://www.youtube.com/v/%s", strings.TrimPrefix(videoID, "v/"))
+		}
+	}
+
+	// Handle Spotify track URLs
+	if parsedURL.Host == "open.spotify.com" && strings.HasPrefix(parsedURL.Path, "/track/") {
+		trackID := strings.TrimPrefix(parsedURL.Path, "/track/")
+		return fmt.Sprintf("https://open.spotify.com/track/%s", trackID)
 	}
 	return data
 }
