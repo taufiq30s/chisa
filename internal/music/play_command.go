@@ -17,6 +17,11 @@ import (
 Play Command
 */
 func (m *MusicBot) Play(s *discordgo.Session, i *discordgo.InteractionCreate, data string) {
+	if m == nil {
+		fmt.Println("MusicBot Client is not ready.")
+		utils.ErrorLog.Println("MusicBot Client is not ready.")
+		return
+	}
 	// Create voicestate
 	voiceState, err := s.State.VoiceState(i.GuildID, i.Member.User.ID)
 	if err != nil {
