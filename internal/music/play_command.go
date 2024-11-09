@@ -100,3 +100,98 @@ func (m *MusicBot) Skip(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	m.setNextTrackAsInteractionReply(i)
 	player.Update(context.TODO(), lavalink.WithPosition(player.Track().Info.Length))
 }
+
+func (m *MusicBot) Pause(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	player := m.Client.Player(snowflake.MustParse(i.GuildID))
+	if player.Track() == nil {
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "No track playing",
+			Description: "There is no track playing.",
+		}).Execute()
+		return
+	}
+	player.Update(context.TODO(), lavalink.WithPaused(true))
+	resp := responses.CreateMessageEmbed(
+		s, "Paused",
+		"Paused.",
+		m.featureName,
+		responses.SetColor("0bdd47"),
+	)
+	responses.InteractionResponse(
+		s, i.Interaction,
+		discordgo.InteractionResponseChannelMessageWithSource,
+		false,
+		resp,
+	).Execute()
+}
+
+func (m *MusicBot) Resume(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	player := m.Client.Player(snowflake.MustParse(i.GuildID))
+	if player.Track() == nil {
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "No track playing",
+			Description: "There is no track playing.",
+		}).Execute()
+		return
+	}
+	player.Update(context.TODO(), lavalink.WithPaused(false))
+	resp := responses.CreateMessageEmbed(
+		s, "Resumed",
+		"Resumed.",
+		m.featureName,
+		responses.SetColor("0bdd47"),
+	)
+	responses.InteractionResponse(
+		s, i.Interaction,
+		discordgo.InteractionResponseChannelMessageWithSource,
+		false,
+		resp,
+	).Execute()
+}
+
+func (m *MusicBot) Stop(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	player := m.Client.Player(snowflake.MustParse(i.GuildID))
+	if player.Track() == nil {
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "No track playing",
+			Description: "There is no track playing.",
+		}).Execute()
+		return
+	}
+	player.Update(context.TODO(), lavalink.WithNullTrack())
+	resp := responses.CreateMessageEmbed(
+		s, "Stopped playing",
+		"Stopped playing.",
+		m.featureName,
+		responses.SetColor("0bdd47"),
+	)
+	responses.InteractionResponse(
+		s, i.Interaction,
+		discordgo.InteractionResponseChannelMessageWithSource,
+		false,
+		resp,
+	).Execute()
+}
+
+func (m *MusicBot) Disconnect(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	player := m.Client.Player(snowflake.MustParse(i.GuildID))
+	if player.Track() != nil {
+		player.Update(context.TODO(), lavalink.WithNullTrack())
+	}
+	s.ChannelVoiceJoinManual(i.GuildID, "", false, false)
+	resp := responses.CreateMessageEmbed(
+		s, "Disconnected",
+		"Disconnected.",
+		m.featureName,
+		responses.SetColor("0bdd47"),
+	)
+	responses.InteractionResponse(
+		s, i.Interaction,
+		discordgo.InteractionResponseChannelMessageWithSource,
+		false,
+		resp,
+	).Execute()
+}

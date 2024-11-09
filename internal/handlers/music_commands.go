@@ -20,12 +20,16 @@ var (
 				interaction,
 				parseIdentifier(options[0].Options[0].StringValue()),
 			)
+		case "pause":
+			chisa.Music.Pause(chisa.Session, interaction)
+		case "resume":
+			chisa.Music.Resume(chisa.Session, interaction)
 		case "skip":
 			chisa.Music.Skip(chisa.Session, interaction)
 		case "stop":
-			// stop(chisa.Session, interaction)
+			chisa.Music.Stop(chisa.Session, interaction)
 		case "disconnect":
-			// disconnect(chisa.Session, interaction)
+			chisa.Music.Disconnect(chisa.Session, interaction)
 		}
 	}
 	musicCommands = []*discordgo.ApplicationCommand{
@@ -45,6 +49,16 @@ var (
 							Required:    true,
 						},
 					},
+				},
+				{
+					Name:        "pause",
+					Description: "Pause current song",
+					Type:        1,
+				},
+				{
+					Name:        "resume",
+					Description: "Resume current song",
+					Type:        1,
 				},
 				{
 					Name:        "skip",
