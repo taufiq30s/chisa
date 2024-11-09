@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -91,15 +92,19 @@ Create a new lavalink client
 func (m *MusicBot) ConnectToNodes() error {
 	utils.InfoLog.Println("Connecting to lavalink nodes")
 	fmt.Println("Connecting to lavalink nodes")
-
+	var wg sync.WaitGroup
 	err := m.loadNodes()
+
 	if err != nil {
 		utils.ErrorLog.Println("Failed to load lavalink configuration")
 		return fmt.Errorf("failed to load lavalink configuration: %w", err)
 	}
+
+	wg.Add(len(m.nodes))
 	for _, nodeConfiguration := range m.nodes {
-		go m.connectToNode(&nodeConfiguration)
+		go m.connectToNode(&nodeConfiguration, &wg)
 	}
+	wg.Wait()
 
 	if m.Client.BestNode() == nil {
 		fmt.Println("Music client failed to connected")
@@ -110,9 +115,10 @@ func (m *MusicBot) ConnectToNodes() error {
 	return nil
 }
 
-func (m *MusicBot) connectToNode(config *disgolink.NodeConfig) {
+func (m *MusicBot) connectToNode(config *disgolink.NodeConfig, wg *sync.WaitGroup) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	defer wg.Done()
 
 	node, err := m.Client.AddNode(ctx, *config)
 	if err != nil {
