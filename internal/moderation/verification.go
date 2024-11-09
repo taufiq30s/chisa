@@ -84,7 +84,7 @@ func SendRequestVerificationToAdmin(s *discordgo.Session, newMember *discordgo.U
 
 // Handle when admin accept request by add "verify" role and send
 // Welcome message to "welcome" channel.
-func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
 	var responseEmbed *discordgo.MessageEmbed
 	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
 
@@ -200,7 +200,7 @@ func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCrea
 // Handle when admin reject request then kick rejected new member
 // from server and send DM to confirm to people who give
 // him invitation link
-func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
 	var responseEmbed *discordgo.MessageEmbed
 	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
 

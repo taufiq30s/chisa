@@ -1,17 +1,25 @@
 package handlers
 
 import (
+	"net/url"
+
 	"github.com/bwmarrin/discordgo"
+	"github.com/disgoorg/disgolink/v3/lavalink"
 	"github.com/taufiq30s/chisa/internal/bot"
+	"github.com/taufiq30s/chisa/internal/music"
 )
 
 var (
 	musicCommandHandler = func(chisa *bot.Bot, interaction *discordgo.InteractionCreate) {
 		switch options := interaction.ApplicationCommandData().Options; options[0].Name {
 		case "play":
-			chisa.Music.Play(chisa.Session, interaction, options[0].Options[0].StringValue())
+			chisa.Music.Play(
+				chisa.Session,
+				interaction,
+				parseIdentifier(options[0].Options[0].StringValue()),
+			)
 		case "skip":
-			// skip(chisa.Session, interaction)
+			chisa.Music.Skip(chisa.Session, interaction)
 		case "stop":
 			// stop(chisa.Session, interaction)
 		case "disconnect":
@@ -54,4 +62,19 @@ var (
 			},
 		},
 	}
+	SearchButtonHandler = map[string]componentFunction{
+		"search-next":     music.HandleSearchNextPage,
+		"search-previous": music.HandleSearchPreviousPage,
+	}
+	SearchSelectHandler = map[string]componentFunction{
+		"search-select": music.HandleSearchSelect,
+	}
 )
+
+func parseIdentifier(data string) string {
+	_, err := url.ParseRequestURI(data)
+	if err != nil {
+		return lavalink.SearchTypeYouTube.Apply(data)
+	}
+	return data
+}

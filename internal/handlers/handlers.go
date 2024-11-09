@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"slices"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/taufiq30s/chisa/internal/bot"
@@ -9,7 +10,8 @@ import (
 	"github.com/taufiq30s/chisa/utils"
 )
 
-func Register(chisa *bot.Bot, guildId string) {
+func Register(wg *sync.WaitGroup, chisa *bot.Bot, guildId string) {
+	defer wg.Done()
 	utils.InfoLog.Println("Registering Handler")
 	defer utils.InfoLog.Println("Registering Handlers Successfully")
 
@@ -26,23 +28,24 @@ func Unregister(chisa *bot.Bot, guildId string) {
 	unregisterCommands(chisa, guildId, commands)
 }
 
+type componentFunction func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{})
+
 var (
 	commands        []*discordgo.ApplicationCommand
 	eventHandlers   []func(chisa *bot.Bot) interface{}
 	commandHandlers map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate)
-	buttonHandlers  map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate)
+	buttonHandlers  map[string]componentFunction
+	selectHandlers  map[string]componentFunction
 )
 
 // Merge map of command interactions
-func mergeMap(maps ...map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate)) map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	merged := make(map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate))
-
+func mergeMap(maps ...map[string]componentFunction) map[string]componentFunction {
+	merged := make(map[string]componentFunction)
 	for _, m := range maps {
 		for key, value := range m {
 			merged[key] = value
 		}
 	}
-
 	return merged
 }
 
@@ -59,8 +62,14 @@ func init() {
 	buttonHandlers = mergeMap(
 		ScamButtonResponseHandler,
 		VerificationButtonResponseHandler,
+		SearchButtonHandler,
+	)
+	selectHandlers = mergeMap(
+		SearchSelectHandler,
 	)
 	eventHandlers = []func(chisa *bot.Bot) interface{}{
 		events.MessageCreate,
+		events.OnVoiceServerUpdate,
+		events.OnVoiceStateUpdate,
 	}
 }

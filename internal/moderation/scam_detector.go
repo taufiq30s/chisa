@@ -20,7 +20,7 @@ import (
 var (
 	DATABSE_SCAM_URLS = "https://raw.githubusercontent.com/Discord-AntiScam/scam-links/main/list.json"
 	ctx               = context.Background()
-	BanScammerHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	BanScammerHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
 		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -41,7 +41,7 @@ var (
 		}
 		s.GuildBanCreateWithReason(i.GuildID, userId, "Compromise account/indicated scam", 0)
 	}
-	RemoveSuspectHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	RemoveSuspectHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
 		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,

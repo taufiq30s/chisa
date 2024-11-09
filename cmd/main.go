@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/taufiq30s/chisa/internal/bot"
@@ -25,6 +27,9 @@ func init() {
 }
 
 func main() {
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	token, err := utils.GetEnv("BOT_TOKEN")
 	if err != nil {
 		utils.ErrorLog.Fatalln(err)
@@ -35,18 +40,16 @@ func main() {
 		utils.ErrorLog.Fatalln(err)
 	}
 
-	youtubeAPIKey, err := utils.GetEnv("YOUTUBE_API_KEY")
-	if err != nil {
-		utils.ErrorLog.Fatalln(err)
-	}
-
 	// Initialize bot and start bot
 	chisa.Start(token, guildId)
 
-	// Initialize Spotify client
-	go chisa.InitializeMusicClient(youtubeAPIKey)
+	// Initialize Feature and Handlers
+	go chisa.InitializeMusicClient(&wg, guildId)
+	go handlers.Register(&wg, &chisa, guildId)
 
-	go handlers.Register(&chisa, guildId)
+	wg.Wait()
+	fmt.Printf("Bot Ready with uptime: %s\n", time.Now().Format("Mon Jan 2 2006 15:04:05 GMT+0000"))
+	utils.InfoLog.Printf("Bot Ready with uptime: %s\n", time.Now().Format("Mon Jan 2 2006 15:04:05 GMT+0000"))
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)

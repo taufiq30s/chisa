@@ -1,13 +1,19 @@
 package responses
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"fmt"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/taufiq30s/chisa/utils"
+)
 
 type interactionResponse struct {
-	Session      *discordgo.Session
-	Interaction  *discordgo.Interaction
-	ResponseType discordgo.InteractionResponseType
-	Ephemeral    bool
-	Data         *discordgo.MessageEmbed
+	session      *discordgo.Session
+	interaction  *discordgo.Interaction
+	responseType discordgo.InteractionResponseType
+	ephemeral    bool
+	data         *discordgo.MessageEmbed
+	components   []discordgo.MessageComponent
 }
 
 func InteractionResponse(
@@ -22,25 +28,43 @@ func InteractionResponse(
 		responseType,
 		isEphemeral,
 		data,
+		[]discordgo.MessageComponent{},
 	}
+}
+
+func (r *interactionResponse) AddActionRow(components *discordgo.ActionsRow) {
+	r.components = append(r.components, components)
+}
+
+func (r *interactionResponse) SetUpdateResponse() {
+	r.responseType = discordgo.InteractionResponseUpdateMessage
 }
 
 func (response interactionResponse) Execute() {
 	data := &discordgo.InteractionResponseData{
 		Embeds: []*discordgo.MessageEmbed{
-			response.Data,
+			response.data,
 		},
 	}
 
-	if response.Ephemeral {
+	if len(response.components) > 0 {
+		data.Components = response.components
+	}
+
+	if response.ephemeral {
 		data.Flags = discordgo.MessageFlagsEphemeral
 	}
 
-	response.Session.InteractionRespond(
-		response.Interaction,
+	err := response.session.InteractionRespond(
+		response.interaction,
 		&discordgo.InteractionResponse{
-			Type: response.ResponseType,
+			Type: response.responseType,
 			Data: data,
 		},
 	)
+
+	if err != nil {
+		fmt.Println("Error responding to interaction:", err)
+		utils.ErrorLog.Println("Error responding to interaction:", err)
+	}
 }

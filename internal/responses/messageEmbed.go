@@ -1,10 +1,13 @@
 package responses
 
 import (
+	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/taufiq30s/chisa/utils"
 )
 
 /*
@@ -35,6 +38,12 @@ func CreateMessageEmbed(
 	featureName string,
 	options ...func(*discordgo.MessageEmbed),
 ) *discordgo.MessageEmbed {
+	version, err := utils.GetEnv("VERSION")
+	if err != nil {
+		log.Fatalf("Failed to load .env : %s", err)
+		version = "0.0.1"
+	}
+
 	embed := &discordgo.MessageEmbed{
 		Title:       title,
 		Description: description,
@@ -43,7 +52,7 @@ func CreateMessageEmbed(
 			IconURL: session.State.User.AvatarURL(""),
 		},
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: "Chisa Version: 0.0.1 ",
+			Text: fmt.Sprintf("Chisa Version: %s", version),
 		},
 		Timestamp: time.Now().Format(time.RFC3339),
 	}

@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/taufiq30s/chisa/internal/bot"
 	"github.com/taufiq30s/chisa/utils"
 )
 
 func registerEvents(chisa *bot.Bot) {
+	fmt.Println("Registering Events")
 	utils.InfoLog.Println("Registering Events")
 	for _, handler := range eventHandlers {
 		fn := handler(chisa)
@@ -14,8 +18,7 @@ func registerEvents(chisa *bot.Bot) {
 	}
 }
 
-func registerButtonHandlers(id string) (func(s *discordgo.Session, i *discordgo.InteractionCreate), bool) {
-	utils.InfoLog.Println("Registering Button Handlers")
+func registerButtonHandlers(id string) (componentFunction, bool) {
 	for key := range buttonHandlers {
 		if len(id) >= len(key) && id[:len(key)] == key {
 			return buttonHandlers[key], true
@@ -24,7 +27,17 @@ func registerButtonHandlers(id string) (func(s *discordgo.Session, i *discordgo.
 	return nil, false
 }
 
+func registerSelectHandlers(id string) (componentFunction, bool) {
+	for key := range selectHandlers {
+		if len(id) >= len(key) && id[:len(key)] == key {
+			return selectHandlers[key], true
+		}
+	}
+	return nil, false
+}
+
 func registerCommandHandlers(chisa *bot.Bot) {
+	fmt.Println("Registering Command Handlers")
 	utils.InfoLog.Println("Registering Command Handlers")
 	chisa.Session.AddHandler(func(c *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		switch interaction.Type {
@@ -36,6 +49,18 @@ func registerCommandHandlers(chisa *bot.Bot) {
 			switch interaction.MessageComponentData().ComponentType {
 			case discordgo.ButtonComponent:
 				if handle, ok := registerButtonHandlers(interaction.MessageComponentData().CustomID); ok {
+					if strings.HasPrefix(interaction.MessageComponentData().CustomID, "search") {
+						handle(chisa.Session, interaction, chisa.Music)
+						return
+					}
+					handle(chisa.Session, interaction)
+				}
+			case discordgo.SelectMenuComponent:
+				if handle, ok := registerSelectHandlers(interaction.MessageComponentData().CustomID); ok {
+					if strings.HasPrefix(interaction.MessageComponentData().CustomID, "search") {
+						handle(chisa.Session, interaction, chisa.Music)
+						return
+					}
 					handle(chisa.Session, interaction)
 				}
 			}

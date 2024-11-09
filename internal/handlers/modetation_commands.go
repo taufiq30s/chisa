@@ -18,11 +18,11 @@ var (
 			moderation.SendRequestVerificationHandle(chisa.Session, i)
 		}
 	}
-	ScamButtonResponseHandler = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+	ScamButtonResponseHandler = map[string]componentFunction{
 		"scam-ban":            moderation.BanScammerHandler,
 		"scam-remove-timeout": moderation.RemoveSuspectHandler,
 	}
-	VerificationButtonResponseHandler = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+	VerificationButtonResponseHandler = map[string]componentFunction{
 		"acc-req-accept": moderation.HandleVerificationAccept,
 		"acc-req-reject": moderation.HandleVerificationReject,
 	}
