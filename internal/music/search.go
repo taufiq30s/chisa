@@ -64,12 +64,6 @@ func (m *MusicBot) moveSearchPage(s *discordgo.Session, i *discordgo.Interaction
 
 func (m *MusicBot) selectSearchResult(s *discordgo.Session, i *discordgo.InteractionCreate, trackID string) {
 	state := m.searchResults[i.Member.User.ID]
-	s.InteractionRespond(
-		i.Interaction,
-		&discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		},
-	)
 	if state == nil {
 		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
 			Title:       "Session Expired",
