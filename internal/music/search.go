@@ -7,6 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/disgoorg/disgolink/v3/lavalink"
 	"github.com/taufiq30s/chisa/internal/responses"
+	"github.com/taufiq30s/chisa/utils"
 )
 
 type searchResultState struct {
@@ -14,7 +15,7 @@ type searchResultState struct {
 	page      int
 	length    int
 	timestamp time.Time
-	channelId *string
+	channelId string
 	messageId string
 }
 
@@ -38,7 +39,7 @@ func (m *MusicBot) search(s *discordgo.Session, i *discordgo.InteractionCreate, 
 			page:      1,
 			length:    length,
 			timestamp: time.Now(),
-			channelId: &i.ChannelID,
+			channelId: i.ChannelID,
 		}
 	}
 	m.searchResult(s, i, 1, tracks, false)
@@ -96,7 +97,7 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 		body = "No result found"
 	} else {
 		title = "Search result"
-		for _, track := range result[(page-1)*limit+1 : (page)*limit+1] {
+		for _, track := range result[(page-1)*limit : (page)*limit] {
 			body += fmt.Sprintf(
 				"%d. **%s - %s** `%02d:%02d`\n",
 				(page-1)*limit+1,
@@ -156,21 +157,29 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 	}
 	resp.Execute()
 
-	// Set message id after 10 seconds
-	// go func() {
-	// 	time.Sleep(10 * time.Second)
-	// 	m.searchResults[i.Member.User.ID].messageId = i.Message.ID
-	// }()
+	// Get Message ID after send respond
+	msg, err := s.InteractionResponse(i.Interaction)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	m.searchResults[i.Member.User.ID].messageId = msg.ID
 }
 
 // Clean seach cache every 5 minutes and
 // age of the cache is more than 5 minutes
 func (m *MusicBot) InitializeCleanSearchCache() {
+	timeout, _ := time.ParseDuration("1m")
 	for {
-		time.Sleep(5 * time.Minute)
+		time.Sleep(timeout)
 		for k, v := range m.searchResults {
-			if time.Since(v.timestamp) > 5*time.Minute {
-				m.session.ChannelMessageDelete(*v.channelId, v.messageId)
+			if time.Since(v.timestamp) > timeout {
+				fmt.Println("Execute")
+				err := m.session.ChannelMessageDelete(v.channelId, v.messageId)
+				if err != nil {
+					fmt.Println("Failed to remove message:", err)
+					utils.ErrorLog.Println("Failed to remove message:", err)
+				}
 				delete(m.searchResults, k)
 			}
 		}
