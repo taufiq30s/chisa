@@ -24,10 +24,10 @@ type trackInfo struct {
 	Thumbnail string
 	Url       string
 	Provider  string
-	AddedBy   string
+	AddedBy   *string
 }
 
-func newMusicTrack(track *lavalink.Track, username string) trackInfo {
+func newMusicTrack(track *lavalink.Track, username *string) trackInfo {
 	return trackInfo{
 		Title:     track.Info.Title,
 		Artist:    track.Info.Author,
@@ -142,6 +142,10 @@ func (MusicBot *MusicBot) loadNodes() error {
 
 func (m *MusicBot) generateMusicInformation(state *trackState, status string) {
 	info := newMusicTrack(state.lavaTrack, state.addedBy)
+	if state.playlistName != nil {
+		info.Title = *state.playlistName
+	}
+
 	body := responses.CreateMessageEmbed(
 		m.session, info.Title,
 		"",
@@ -152,7 +156,7 @@ func (m *MusicBot) generateMusicInformation(state *trackState, status string) {
 		responses.SetFields([]*discordgo.MessageEmbedField{
 			{
 				Name:   "Added by",
-				Value:  info.AddedBy,
+				Value:  *info.AddedBy,
 				Inline: true,
 			},
 			{
@@ -179,6 +183,6 @@ func (m *MusicBot) generateMusicInformation(state *trackState, status string) {
 			body,
 		).Execute()
 	} else {
-		m.session.ChannelMessageSendEmbed(state.channelId, body)
+		m.session.ChannelMessageSendEmbed(*state.channelId, body)
 	}
 }

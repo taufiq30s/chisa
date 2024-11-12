@@ -6,17 +6,18 @@ import (
 )
 
 type trackState struct {
-	lavaTrack   *lavalink.Track
-	interaction *discordgo.InteractionCreate
-	addedBy     string
-	channelId   string
+	lavaTrack    *lavalink.Track
+	interaction  *discordgo.InteractionCreate
+	addedBy      *string
+	playlistName *string
+	channelId    *string
 }
 
 func (m *MusicBot) addToQueue(t *lavalink.Track, i *discordgo.InteractionCreate) {
 	state := trackState{
 		lavaTrack: t,
-		addedBy:   i.Member.User.Username,
-		channelId: i.ChannelID,
+		addedBy:   &i.Member.User.Username,
+		channelId: &i.ChannelID,
 	}
 	if m.player.Track() == nil {
 		state.interaction = i
@@ -35,18 +36,19 @@ func (m *MusicBot) addPlaylistToQueue(p *lavalink.Playlist, i *discordgo.Interac
 	for _, t := range p.Tracks {
 		state := trackState{
 			lavaTrack: &t,
-			addedBy:   i.Member.User.Username,
-			channelId: i.ChannelID,
+			addedBy:   &i.Member.User.Username,
+			channelId: &i.ChannelID,
 		}
 		m.queue = append(m.queue, state)
 	}
 
 	m.generateMusicInformation(
 		&trackState{
-			lavaTrack:   &p.Tracks[0],
-			interaction: i,
-			addedBy:     i.Member.User.Username,
-			channelId:   i.ChannelID,
+			lavaTrack:    &p.Tracks[0],
+			playlistName: &p.Info.Name,
+			interaction:  i,
+			addedBy:      &i.Member.User.Username,
+			channelId:    &i.ChannelID,
 		},
 		"Added Playlist to Queue",
 	)
