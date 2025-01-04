@@ -11,33 +11,10 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/disgoorg/disgolink/v3/disgolink"
-	"github.com/disgoorg/disgolink/v3/lavalink"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/taufiq30s/chisa/internal/responses"
 	"github.com/taufiq30s/chisa/utils"
 )
-
-type trackInfo struct {
-	Title     string
-	Artist    string
-	Length    int
-	Thumbnail string
-	Url       string
-	Provider  string
-	AddedBy   *string
-}
-
-func newMusicTrack(track *lavalink.Track, username *string) trackInfo {
-	return trackInfo{
-		Title:     track.Info.Title,
-		Artist:    track.Info.Author,
-		Length:    int(track.Info.Length.Milliseconds()),
-		Thumbnail: *track.Info.ArtworkURL,
-		Url:       *track.Info.URI,
-		Provider:  track.Info.SourceName,
-		AddedBy:   username,
-	}
-}
 
 type MusicBot struct {
 	Client        disgolink.Client
@@ -71,6 +48,8 @@ func (m *MusicBot) InitializeListenerFunctions() {
 		disgolink.NewListenerFunc(m.onTrackStart),
 		disgolink.NewListenerFunc(m.onTrackStuck),
 		disgolink.NewListenerFunc(m.onWebSocketClosed),
+		disgolink.NewListenerFunc(m.onTrackException),
+		disgolink.NewListenerFunc(m.onPlayerUpdate),
 	)
 }
 
@@ -78,8 +57,6 @@ func (m *MusicBot) InitializeListenerFunctions() {
 Create a new lavalink client
 */
 func (m *MusicBot) ConnectToNodes() error {
-	utils.InfoLog.Println("Connecting to lavalink nodes")
-	fmt.Println("Connecting to lavalink nodes")
 	var wg sync.WaitGroup
 	err := m.loadNodes()
 
@@ -97,6 +74,7 @@ func (m *MusicBot) ConnectToNodes() error {
 	if m.Client.BestNode() == nil {
 		fmt.Println("Music client failed to connected")
 		utils.ErrorLog.Println("Music client failed to connected")
+		return fmt.Errorf("music client failed to connected")
 	}
 	fmt.Println("Music client connected")
 	utils.InfoLog.Println("Music client connected")
@@ -104,6 +82,7 @@ func (m *MusicBot) ConnectToNodes() error {
 }
 
 func (m *MusicBot) connectToNode(config *disgolink.NodeConfig, wg *sync.WaitGroup) {
+	fmt.Printf("Connecting to lavalink node %s\n", config.Name)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	defer wg.Done()
@@ -115,12 +94,22 @@ func (m *MusicBot) connectToNode(config *disgolink.NodeConfig, wg *sync.WaitGrou
 		return
 	}
 
+	// Get lavalink node version and make sure the node is healthy
 	version, err := node.Version(ctx)
 	if err != nil {
 		utils.ErrorLog.Println("Failed to get lavalink node version")
 		fmt.Printf("Failed to connect to lavalink node %s\n", config.Name)
 		return
 	}
+
+	stats := node.Stats()
+	if !checkNodeHealth(&stats) {
+		fmt.Printf("Node %s is unhealthy\n", node.Config().Name)
+		utils.ErrorLog.Printf("Node %s is unhealthy\n", node.Config().Name)
+		m.Client.RemoveNode(node.Config().Name)
+		return
+	}
+
 	utils.InfoLog.Printf("Connected to lavalink node: %s version: %s\n", node.Config().Name, version)
 	fmt.Printf("Connected to lavalink node: %s version: %s\n", node.Config().Name, version)
 }
@@ -128,7 +117,7 @@ func (m *MusicBot) connectToNode(config *disgolink.NodeConfig, wg *sync.WaitGrou
 /*
 Load lavalink nodes from lavalink_clients.json
 */
-func (MusicBot *MusicBot) loadNodes() error {
+func (m *MusicBot) loadNodes() error {
 	nodesFile, err := os.Open("lavalink_nodes.json")
 	if err != nil {
 		return err
@@ -136,7 +125,7 @@ func (MusicBot *MusicBot) loadNodes() error {
 
 	defer nodesFile.Close()
 	bufferFile, _ := io.ReadAll(nodesFile)
-	json.Unmarshal(bufferFile, &MusicBot.nodes)
+	json.Unmarshal(bufferFile, &m.nodes)
 	return nil
 }
 

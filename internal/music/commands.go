@@ -16,10 +16,18 @@ import (
 /*
 Play Command
 */
-func (m *MusicBot) Play(s *discordgo.Session, i *discordgo.InteractionCreate, data string) {
+func (m *MusicBot) Load(s *discordgo.Session, i *discordgo.InteractionCreate, data string) {
 	if m == nil {
 		fmt.Println("MusicBot Client is not ready.")
 		utils.ErrorLog.Println("MusicBot Client is not ready.")
+		return
+	}
+	if m.Client.BestNode() == nil {
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "No available nodes",
+			Description: "No available nodes to play music. Please contact administrator.",
+		}).Execute()
 		return
 	}
 	// Create voicestate
@@ -32,23 +40,22 @@ func (m *MusicBot) Play(s *discordgo.Session, i *discordgo.InteractionCreate, da
 		}).Execute()
 	}
 
-	// Initialize Player
-	player := m.Client.Player(snowflake.MustParse(i.GuildID))
+	// Find track and store selected track
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	var playingTrack *lavalink.Track
 	defer cancel()
 
-	// Find track and store selected track
-	var playingTrack *lavalink.Track
+	fmt.Println("Player Node: ", m.Client.BestNode().Config().Name)
 	m.Client.BestNode().LoadTracksHandler(ctx, data, disgolink.NewResultHandler(
 		func(track lavalink.Track) {
 			fmt.Println("Start 1")
-			if player.Track() == nil {
+			if m.player.Track() == nil {
 				playingTrack = &track
 			}
 			m.addToQueue(&track, i)
 		},
 		func(playlist lavalink.Playlist) {
-			if player.Track() == nil {
+			if m.player.Track() == nil {
 				playingTrack = &playlist.Tracks[0]
 			}
 			m.addPlaylistToQueue(&playlist, i)
@@ -79,11 +86,21 @@ func (m *MusicBot) Play(s *discordgo.Session, i *discordgo.InteractionCreate, da
 
 	if err := s.ChannelVoiceJoinManual(i.GuildID, voiceState.ChannelID, false, false); err != nil {
 		fmt.Println(err)
+		utils.ErrorLog.Println(err)
 	}
-	fmt.Println(player.Node().Config().Name)
-	err = player.Update(context.TODO(), lavalink.WithTrack(*playingTrack))
+	m.Play(playingTrack)
+}
+
+func (m *MusicBot) Play(track *lavalink.Track) {
+	utils.InfoLog.Println("Player Node: ", m.player.Node().Config().Name)
+	fmt.Println("Player Node: ", m.player.Node().Config().Name)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err := m.player.Update(ctx, lavalink.WithTrack(*track))
 	if err != nil {
 		fmt.Println(err)
+		utils.ErrorLog.Println(err)
 	}
 }
 
@@ -161,6 +178,7 @@ func (m *MusicBot) Stop(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}).Execute()
 		return
 	}
+	m.clearQueue()
 	player.Update(context.TODO(), lavalink.WithNullTrack())
 	resp := responses.CreateMessageEmbed(
 		s, "Stopped playing",

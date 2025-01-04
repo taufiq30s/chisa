@@ -74,7 +74,7 @@ func (m *MusicBot) selectSearchResult(s *discordgo.Session, i *discordgo.Interac
 		return
 	}
 
-	m.Play(s, i, trackID)
+	m.Load(s, i, trackID)
 	s.ChannelMessageDelete(i.ChannelID, i.Message.ID)
 	delete(m.searchResults, i.Member.User.ID)
 }

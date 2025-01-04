@@ -15,7 +15,7 @@ var (
 	musicCommandHandler = func(chisa *bot.Bot, interaction *discordgo.InteractionCreate) {
 		switch options := interaction.ApplicationCommandData().Options; options[0].Name {
 		case "play":
-			chisa.Music.Play(
+			chisa.Music.Load(
 				chisa.Session,
 				interaction,
 				parseIdentifier(options[0].Options[0].StringValue()),
