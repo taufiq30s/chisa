@@ -2,3 +2,4 @@ bin/*
 build/*
 .env
 lavalink_nodes.json
+*.backup
