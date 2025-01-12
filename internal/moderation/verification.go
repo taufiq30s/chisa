@@ -34,13 +34,15 @@ func SendRequestVerificationHandle(s *discordgo.Session, i *discordgo.Interactio
 		))
 	}
 
-	responses.InteractionResponse(s, i.Interaction, discordgo.InteractionResponseChannelMessageWithSource, true, responses.CreateMessageEmbed(
+	embed := responses.CreateMessageEmbed(
 		s,
 		"Verification Request Sent",
 		"You request has been sent to moderator and we will process it.",
 		featureName,
 		responses.SetColor("0bdd47"),
-	)).Execute()
+	)
+
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(embed).Send()
 }
 
 func SendRequestVerificationToAdmin(s *discordgo.Session, newMember *discordgo.User, modChannel string) error {
@@ -167,13 +169,7 @@ func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCrea
 		)
 
 		// Send response to moderator
-		responses.InteractionResponse(
-			s,
-			i.Interaction,
-			discordgo.InteractionResponseChannelMessageWithSource,
-			false,
-			responseEmbed,
-		).Execute()
+		responses.InteractionResponse(s, i.Interaction).WithEmbed(responseEmbed).Send()
 	}()
 
 	// Send welcome message to new member in "welcome" channel
@@ -273,13 +269,7 @@ func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCrea
 			featureName,
 			responses.SetColor("df0000"),
 		)
-		responses.InteractionResponse(
-			s,
-			i.Interaction,
-			discordgo.InteractionResponseChannelMessageWithSource,
-			false,
-			responseEmbed,
-		).Execute()
+		responses.InteractionResponse(s, i.Interaction).WithEmbed(responseEmbed).Send()
 	}()
 
 	// Send DM to rejected member

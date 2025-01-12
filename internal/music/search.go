@@ -109,53 +109,51 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 		}
 	}
 
-	resp := responses.InteractionResponse(s, i.Interaction,
-		discordgo.InteractionResponseChannelMessageWithSource,
-		false,
-		responses.CreateMessageEmbed(
-			s, title,
-			body,
-			m.featureName,
-			responses.SetColor("5e11d9"),
-		),
-	)
-	resp.AddActionRow(&discordgo.ActionsRow{
-		Components: []discordgo.MessageComponent{
-			discordgo.SelectMenu{
-				CustomID:    fmt.Sprintf("search-select-%s", i.Member.User.ID),
-				Placeholder: "Select a track",
-				Options: func() (options []discordgo.SelectMenuOption) {
-					for _, track := range result[(page-1)*limit+1 : (page)*limit+1] {
-						options = append(options, discordgo.SelectMenuOption{
-							Label: track.Info.Title,
-							Value: track.Info.Identifier,
-						})
-					}
-					return options
-				}(),
-			},
-		},
-	})
-	resp.AddActionRow(&discordgo.ActionsRow{
-		Components: []discordgo.MessageComponent{
-			discordgo.Button{
-				Disabled: page == 1,
-				Label:    "Previous",
-				Style:    discordgo.PrimaryButton,
-				CustomID: fmt.Sprintf("search-previous-%s", i.Interaction.ID),
-			},
-			discordgo.Button{
-				Disabled: len(result) <= page*limit,
-				Label:    "Next",
-				Style:    discordgo.PrimaryButton,
-				CustomID: fmt.Sprintf("search-next-%s", i.Interaction.ID),
-			},
-		},
-	})
-	if isUpdate {
-		resp.SetUpdateResponse()
+	var err error
+	response := responses.InteractionResponse(s, i.Interaction)
+	if !isUpdate {
+		err = response.Defer()
+		if err != nil {
+			fmt.Println("Failed to defer interaction", err)
+			utils.ErrorLog.Println("Failed to defer interaction", err)
+			return
+		}
+		time.Sleep(500 * time.Millisecond)
+	} else {
+		response.SetResponseTypeAsUpdate()
 	}
-	resp.Execute()
+
+	embed := responses.CreateMessageEmbed(
+		s, title,
+		body,
+		m.featureName,
+		responses.SetColor("5e11d9"),
+	)
+	response.WithEmbed(embed).WithSelectMenu(
+		fmt.Sprintf("search-select-%s", i.Member.User.ID),
+		"Select a track",
+		func() (options []discordgo.SelectMenuOption) {
+			for _, track := range result[(page-1)*limit : (page)*limit] {
+				options = append(options, discordgo.SelectMenuOption{
+					Label: track.Info.Title,
+					Value: track.Info.Identifier,
+				})
+			}
+			return options
+		},
+	).AddNewRow().WithButton(
+		"Previous", discordgo.PrimaryButton, fmt.Sprintf("search-previous-%s", i.Interaction.ID), page == 1,
+	).WithButton("Next", discordgo.PrimaryButton, fmt.Sprintf("search-next-%s", i.Interaction.ID), len(result) <= page*limit)
+
+	if !isUpdate {
+		err = response.SendDefer()
+	} else {
+		err = response.Send()
+	}
+	if err != nil {
+		fmt.Println("Failed to send search result", err)
+		utils.ErrorLog.Println("Failed to send search result", err)
+	}
 
 	// Get Message ID after send respond
 	msg, err := s.InteractionResponse(i.Interaction)

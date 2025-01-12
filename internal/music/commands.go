@@ -17,6 +17,11 @@ import (
 Play Command
 */
 func (m *MusicBot) Load(s *discordgo.Session, i *discordgo.InteractionCreate, data string) {
+	err := responses.InteractionResponse(s, i.Interaction).Defer()
+	if err != nil {
+		utils.ErrorLog.Println(err)
+		return
+	}
 	if m == nil {
 		fmt.Println("MusicBot Client is not ready.")
 		utils.ErrorLog.Println("MusicBot Client is not ready.")
@@ -129,7 +134,7 @@ func (m *MusicBot) Pause(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 	player.Update(context.TODO(), lavalink.WithPaused(true))
-	resp := responses.CreateMessageEmbed(
+	embed := responses.CreateMessageEmbed(
 		s, "Paused",
 		"Paused.",
 		m.featureName,
@@ -137,10 +142,7 @@ func (m *MusicBot) Pause(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	)
 	responses.InteractionResponse(
 		s, i.Interaction,
-		discordgo.InteractionResponseChannelMessageWithSource,
-		false,
-		resp,
-	).Execute()
+	).WithEmbed(embed).Send()
 }
 
 func (m *MusicBot) Resume(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -154,7 +156,7 @@ func (m *MusicBot) Resume(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		return
 	}
 	player.Update(context.TODO(), lavalink.WithPaused(false))
-	resp := responses.CreateMessageEmbed(
+	embed := responses.CreateMessageEmbed(
 		s, "Resumed",
 		"Resumed.",
 		m.featureName,
@@ -162,10 +164,7 @@ func (m *MusicBot) Resume(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	)
 	responses.InteractionResponse(
 		s, i.Interaction,
-		discordgo.InteractionResponseChannelMessageWithSource,
-		false,
-		resp,
-	).Execute()
+	).WithEmbed(embed).Send()
 }
 
 func (m *MusicBot) Stop(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -180,7 +179,7 @@ func (m *MusicBot) Stop(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 	m.clearQueue()
 	player.Update(context.TODO(), lavalink.WithNullTrack())
-	resp := responses.CreateMessageEmbed(
+	embed := responses.CreateMessageEmbed(
 		s, "Stopped playing",
 		"Stopped playing.",
 		m.featureName,
@@ -188,10 +187,7 @@ func (m *MusicBot) Stop(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	)
 	responses.InteractionResponse(
 		s, i.Interaction,
-		discordgo.InteractionResponseChannelMessageWithSource,
-		false,
-		resp,
-	).Execute()
+	).WithEmbed(embed).Send()
 }
 
 func (m *MusicBot) Disconnect(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -200,7 +196,7 @@ func (m *MusicBot) Disconnect(s *discordgo.Session, i *discordgo.InteractionCrea
 		player.Update(context.TODO(), lavalink.WithNullTrack())
 	}
 	s.ChannelVoiceJoinManual(i.GuildID, "", false, false)
-	resp := responses.CreateMessageEmbed(
+	embed := responses.CreateMessageEmbed(
 		s, "Disconnected",
 		"Disconnected.",
 		m.featureName,
@@ -208,8 +204,5 @@ func (m *MusicBot) Disconnect(s *discordgo.Session, i *discordgo.InteractionCrea
 	)
 	responses.InteractionResponse(
 		s, i.Interaction,
-		discordgo.InteractionResponseChannelMessageWithSource,
-		false,
-		resp,
-	).Execute()
+	).WithEmbed(embed).Send()
 }

@@ -168,12 +168,16 @@ func (m *MusicBot) generateMusicInformation(state *trackState, status string) {
 		}),
 	)
 	if state.interaction != nil {
-		responses.InteractionResponse(m.session, state.interaction.Interaction,
-			discordgo.InteractionResponseChannelMessageWithSource,
-			false,
-			body,
-		).Execute()
+		err := responses.InteractionResponse(m.session, state.interaction.Interaction).WithEmbed(body).SendDefer()
+		if err != nil {
+			fmt.Println("Failed to send interaction response", err)
+			utils.ErrorLog.Println("Failed to send interaction response", err)
+		}
 	} else {
-		m.session.ChannelMessageSendEmbed(*state.channelId, body)
+		_, err := m.session.ChannelMessageSendEmbed(*state.channelId, body)
+		if err != nil {
+			fmt.Println("Failed to send message", err)
+			utils.ErrorLog.Println("Failed to send message", err)
+		}
 	}
 }
