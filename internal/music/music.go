@@ -105,10 +105,6 @@ func (m *MusicBot) connectToNode(config *disgolink.NodeConfig, wg *sync.WaitGrou
 	}
 
 	stats := node.Stats()
-	fmt.Println(stats.CPU.SystemLoad)
-	fmt.Println(stats.Memory.Free)
-	fmt.Println(stats.Memory.Allocated)
-	fmt.Println(stats.Players)
 	if !checkNodeHealth(&stats) {
 		fmt.Printf("Node %s is unhealthy\n", node.Config().Name)
 		utils.ErrorLog.Printf("Node %s is unhealthy\n", node.Config().Name)
@@ -140,7 +136,6 @@ func (m *MusicBot) generateMusicInformation(state *trackState, status string) {
 	if state.playlistName != nil {
 		info.Title = *state.playlistName
 	}
-	fmt.Println(info.Title)
 
 	body := responses.CreateMessageEmbed(
 		m.session, info.Title,

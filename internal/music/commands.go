@@ -122,6 +122,17 @@ func (m *MusicBot) Skip(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 		return
 	}
+
+	responses.InteractionResponse(
+		s, i.Interaction,
+	).WithEmbed(
+		responses.CreateMessageEmbed(
+			s,
+			"Skipped",
+			"Track Skipped.",
+			m.featureName,
+			responses.SetColor("0bdd47"),
+		)).Send()
 	m.setNextTrackAsInteractionReply(i)
 	player.Update(context.TODO(), lavalink.WithPosition(player.Track().Info.Length))
 }

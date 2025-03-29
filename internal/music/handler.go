@@ -8,6 +8,7 @@ import (
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"github.com/disgoorg/disgolink/v3/lavalink"
 	"github.com/disgoorg/snowflake/v2"
+	"github.com/taufiq30s/chisa/internal/responses"
 	"github.com/taufiq30s/chisa/utils"
 )
 
@@ -52,10 +53,22 @@ func (m *MusicBot) onTrackStart(player disgolink.Player, event lavalink.TrackSta
 }
 
 func (m *MusicBot) onTrackEnd(player disgolink.Player, event lavalink.TrackEndEvent) {
+	channelId := m.getFirstTrack().channelId
 	m.removeFromQueue()
 	fmt.Println("Player end")
 	trackState := m.getFirstTrack()
 	if trackState == nil {
+		_, err := m.session.ChannelMessageSendEmbed(*channelId, responses.CreateMessageEmbed(
+			m.session,
+			"No Song",
+			"No song in queue",
+			m.featureName,
+			responses.SetColor("0bdd47"),
+		))
+		if err != nil {
+			fmt.Printf("Error sending message: %v", err)
+			utils.ErrorLog.Printf("Error sending message: %v", err)
+		}
 		return
 	}
 	guildId, err := utils.GetEnv("AKASHIC_SERVER_ID")
