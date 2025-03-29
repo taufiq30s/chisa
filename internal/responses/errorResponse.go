@@ -19,8 +19,8 @@ func ErrorResponse(session *discordgo.Session, interaction *discordgo.Interactio
 		session, interaction, data,
 	}
 }
-func (res errorResponse) Execute() {
-	res.session.InteractionRespond(
+func (res errorResponse) Execute() error {
+	return res.session.InteractionRespond(
 		res.interaction.Interaction,
 		&discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,

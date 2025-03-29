@@ -50,7 +50,6 @@ func (m *MusicBot) Load(s *discordgo.Session, i *discordgo.InteractionCreate, da
 	var playingTrack *lavalink.Track
 	defer cancel()
 
-	fmt.Println("Player Node: ", m.Client.BestNode().Config().Name)
 	m.Client.BestNode().LoadTracksHandler(ctx, data, disgolink.NewResultHandler(
 		func(track lavalink.Track) {
 			fmt.Println("Start 1")
@@ -112,11 +111,15 @@ func (m *MusicBot) Play(track *lavalink.Track) {
 func (m *MusicBot) Skip(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	player := m.Client.Player(snowflake.MustParse(i.GuildID))
 	if player.Track() == nil {
-		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+		err := responses.ErrorResponse(s, i, &responses.ErrorResponseData{
 			Feature:     m.featureName,
 			Title:       "No track playing",
 			Description: "There is no track playing.",
 		}).Execute()
+		if err != nil {
+			fmt.Println("Error when create error response", err)
+			utils.ErrorLog.Println("Error when create error response", err)
+		}
 		return
 	}
 	m.setNextTrackAsInteractionReply(i)

@@ -25,10 +25,6 @@ func HandleSearchSelect(s *discordgo.Session, i *discordgo.InteractionCreate, pa
 }
 
 func (m *MusicBot) onPlayerUpdate(player disgolink.Player, _ lavalink.PlayerUpdateMessage) {
-	if player.Paused() || player.Track() == nil {
-		return
-	}
-
 	position := player.Position()
 	positionInSeconds := position.Seconds()
 	if m.lastPosition == positionInSeconds && !player.Paused() {
@@ -47,9 +43,6 @@ func (m *MusicBot) onPlayerUpdate(player disgolink.Player, _ lavalink.PlayerUpda
 }
 
 func (m *MusicBot) onTrackStart(player disgolink.Player, event lavalink.TrackStartEvent) {
-	if player.Position().Seconds() != 0 {
-		return
-	}
 	trackState := m.getFirstTrack()
 	m.lastPosition = -1
 	m.generateMusicInformation(
