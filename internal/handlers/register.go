@@ -45,6 +45,10 @@ func registerCommandHandlers(chisa *bot.Bot) {
 			if handle, ok := commandHandlers[interaction.ApplicationCommandData().Name]; ok {
 				handle(chisa, interaction)
 			}
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			if handle, ok := commandAutofillHandlers[interaction.ApplicationCommandData().Name]; ok {
+				handle(chisa, interaction)
+			}
 		case discordgo.InteractionMessageComponent:
 			switch interaction.MessageComponentData().ComponentType {
 			case discordgo.ButtonComponent:

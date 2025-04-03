@@ -31,11 +31,12 @@ func Unregister(chisa *bot.Bot, guildId string) {
 type componentFunction func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{})
 
 var (
-	commands        []*discordgo.ApplicationCommand
-	eventHandlers   []func(chisa *bot.Bot) interface{}
-	commandHandlers map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate)
-	buttonHandlers  map[string]componentFunction
-	selectHandlers  map[string]componentFunction
+	commands                []*discordgo.ApplicationCommand
+	eventHandlers           []func(chisa *bot.Bot) interface{}
+	commandHandlers         map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate)
+	commandAutofillHandlers map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate)
+	buttonHandlers          map[string]componentFunction
+	selectHandlers          map[string]componentFunction
 )
 
 // Merge map of command interactions
@@ -54,10 +55,15 @@ func init() {
 	commands = slices.Concat(commands,
 		musicCommands,
 		VerificationCommands,
+		currencyCommands,
 	)
 	commandHandlers = map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate){
-		"music":  musicCommandHandler,
-		"verify": VerificationCommandHandlers,
+		"music":    musicCommandHandler,
+		"verify":   VerificationCommandHandlers,
+		"currency": currencyCommandHandler,
+	}
+	commandAutofillHandlers = map[string]func(chisa *bot.Bot, i *discordgo.InteractionCreate){
+		"currency": currencyCommandOptions,
 	}
 	buttonHandlers = mergeMap(
 		ScamButtonResponseHandler,

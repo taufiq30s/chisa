@@ -28,7 +28,7 @@ func init() {
 
 func main() {
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
 	token, err := utils.GetEnv("BOT_TOKEN")
 	if err != nil {
@@ -40,11 +40,17 @@ func main() {
 		utils.ErrorLog.Fatalln(err)
 	}
 
+	currencyAPI, err := utils.GetEnv("CURRENCY_API")
+	if err != nil {
+		utils.ErrorLog.Fatalln(err)
+	}
+
 	// Initialize bot and start bot
 	chisa.Start(token, guildId)
 
 	// Initialize Feature and Handlers
 	go chisa.InitializeMusicClient(&wg, guildId)
+	go chisa.InitializeCurrencyClient(&wg, currencyAPI)
 	go handlers.Register(&wg, &chisa, guildId)
 
 	wg.Wait()
@@ -57,5 +63,6 @@ func main() {
 
 	// Unregister all commands
 	go chisa.CloseRedis()
+	go handlers.Unregister(&chisa, guildId)
 	defer chisa.Disconnect()
 }

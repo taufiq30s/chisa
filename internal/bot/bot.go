@@ -6,14 +6,16 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/redis/go-redis/v9"
+	"github.com/taufiq30s/chisa/internal/currency"
 	"github.com/taufiq30s/chisa/internal/music"
 	"github.com/taufiq30s/chisa/utils"
 )
 
 type Bot struct {
-	Session *discordgo.Session
-	Music   *music.MusicBot
-	Redis   *redis.Client
+	Session  *discordgo.Session
+	Music    *music.MusicBot
+	Currency currency.Currency
+	Redis    *redis.Client
 }
 
 func (chisa *Bot) Start(token string, guildId string) {
@@ -71,4 +73,12 @@ func (bot *Bot) InitializeMusicClient(wg *sync.WaitGroup, guildId string) {
 	musicBot.InitializeListenerFunctions()
 	go musicBot.InitializeCleanSearchCache()
 	bot.Music = musicBot
+}
+
+func (bot *Bot) InitializeCurrencyClient(wg *sync.WaitGroup, token string) {
+	defer wg.Done()
+	utils.InfoLog.Println("Connecting to currency client...")
+	fmt.Println("Connecting to currency client...")
+
+	bot.Currency = currency.New(token, bot.Redis)
 }
