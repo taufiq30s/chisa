@@ -11,12 +11,25 @@ type ErrorResponseData struct {
 type errorResponse struct {
 	session     *discordgo.Session
 	interaction *discordgo.InteractionCreate
-	data        *ErrorResponseData
+	embed       *discordgo.MessageEmbed
 }
 
 func ErrorResponse(session *discordgo.Session, interaction *discordgo.InteractionCreate, data *ErrorResponseData) errorResponse {
 	return errorResponse{
-		session, interaction, data,
+		session,
+		interaction,
+		CreateMessageEmbed(
+			session,
+			data.Title,
+			func() string {
+				if data.Description == "" {
+					return data.Err.Error()
+				}
+				return data.Description
+			}(),
+			data.Feature,
+			SetColor("c30010"),
+		),
 	}
 }
 func (res errorResponse) Execute() error {
@@ -26,19 +39,18 @@ func (res errorResponse) Execute() error {
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Embeds: []*discordgo.MessageEmbed{
-					CreateMessageEmbed(
-						res.session,
-						res.data.Title,
-						func() string {
-							if res.data.Description == "" {
-								return res.data.Err.Error()
-							}
-							return res.data.Description
-						}(),
-						res.data.Feature,
-						SetColor("c30010")),
+					res.embed,
 				},
 			},
 		},
 	)
+}
+
+func (res errorResponse) ExecuteDefer() error {
+	edit := &discordgo.WebhookEdit{
+		Embeds: &[]*discordgo.MessageEmbed{res.embed},
+	}
+
+	_, err := res.session.InteractionResponseEdit(res.interaction.Interaction, edit)
+	return err
 }
