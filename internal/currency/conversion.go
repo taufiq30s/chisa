@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/taufiq30s/chisa/internal/responses"
@@ -14,6 +15,12 @@ type ConversionDto struct {
 	Amount              float64
 	BaseCurrency        string
 	DestinationCurrency string
+}
+
+type ConversionResultDto struct {
+	Result    float64
+	Rate      float64
+	UpdatedAt string
 }
 
 func (c *Currency) Conversion(s *discordgo.Session, i *discordgo.InteractionCreate, data *ConversionDto) {
@@ -37,29 +44,31 @@ func (c *Currency) Conversion(s *discordgo.Session, i *discordgo.InteractionCrea
 	data.DestinationCurrency = strings.ToUpper(data.DestinationCurrency)
 
 	// calculate result and return value
-	result, rate, err := c.calculateCurrency(data.Amount, data.BaseCurrency, data.DestinationCurrency)
+	result, err := c.calculateCurrency(data.Amount, data.BaseCurrency, data.DestinationCurrency)
 	if err != nil {
 		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
 			Feature: featureName,
 			Title:   "Conversion Failed",
 			Err:     err,
-		}).Execute()
+		}).ExecuteDefer()
+		return
 	}
 
 	// Show result to user
 	var strRate string
-	if rate < 1 {
-		strRate = fmt.Sprintf("%.5f", rate)
+	fmt.Println(result.Rate, result.Rate < 1)
+	if result.Rate < 1 {
+		strRate = fmt.Sprintf("%.5f", result.Rate)
 	} else {
-		strRate = utils.FormatNumberWithGrouping(rate)
+		strRate = utils.FormatDecimalNumberWithGrouping(result.Rate)
 	}
 	body := responses.CreateMessageEmbed(
 		s, fmt.Sprintf("Exchange from %s to %s", data.BaseCurrency, data.DestinationCurrency),
 		fmt.Sprintf(
 			"**%s %s** = %s %s",
-			utils.FormatNumberWithGrouping(data.Amount),
+			utils.FormatDecimalNumberWithGrouping(data.Amount),
 			data.BaseCurrency,
-			utils.FormatNumberWithGrouping(result),
+			utils.FormatDecimalNumberWithGrouping(result.Result),
 			data.DestinationCurrency),
 		featureName,
 		responses.SetFields([]*discordgo.MessageEmbedField{
@@ -71,6 +80,10 @@ func (c *Currency) Conversion(s *discordgo.Session, i *discordgo.InteractionCrea
 					strRate,
 					data.DestinationCurrency,
 				),
+			},
+			{
+				Name:  "Last updated",
+				Value: result.UpdatedAt,
 			},
 		}),
 	)
@@ -93,13 +106,16 @@ func (c *Currency) validateConversionInput(amount float64, baseCurrency string, 
 	return nil
 }
 
-func (c *Currency) calculateCurrency(amount float64, baseCurrency string, destinationCurrency string) (float64, float64, error) {
+func (c *Currency) calculateCurrency(amount float64, baseCurrency string, destinationCurrency string) (*ConversionResultDto, error) {
 	// Fetch conversion rate
-	rate, err := c.fetchConversionRate(context.Background(), baseCurrency, destinationCurrency)
+	rateData, err := c.fetchConversionRate(context.Background(), baseCurrency, destinationCurrency)
 	if err != nil {
-		return -1, -1, err
+		return nil, err
 	}
-
 	// Calculate conversion
-	return amount * rate, rate, nil
+	return &ConversionResultDto{
+		Result:    amount * rateData.Rate,
+		Rate:      rateData.Rate,
+		UpdatedAt: time.Unix(rateData.UpdatedAt, 0).Format("02 January 2006 15:04:05 MST"),
+	}, nil
 }

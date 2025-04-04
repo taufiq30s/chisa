@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
+	"time"
+
+	"github.com/taufiq30s/chisa/utils"
 )
 
 type ConversionMeta struct {
@@ -29,6 +31,13 @@ type UpdateCurrencyRateDto struct {
 	DestinationCurrency []string
 }
 
+type CurrencyRateDto struct {
+	Rate      float64 `json:"rate"`
+	UpdatedAt int64   `json:"updated_at"`
+}
+
+var currencyRateCacheKey = "currency_rate"
+
 func (c *Currency) UpdateCurrencyRate(ctx context.Context) error {
 	// Fetch conversion rate from API
 	apiResponse, err := c.fetchLatestConversionRate(top5Currencies.BaseCurrency, top5Currencies.DestinationCurrency)
@@ -36,71 +45,84 @@ func (c *Currency) UpdateCurrencyRate(ctx context.Context) error {
 		return err
 	}
 
+	// TODO: Delete all outdate currency_rate
+
 	// Save conversion rate to cache
+	hashData := make(map[string]any)
 	for _, currency := range top5Currencies.DestinationCurrency {
 		rate := apiResponse.Data[currency].Value
 		reversedRate := 1.0 / rate
-
-		err = c.rdb.Set(
-			ctx,
-			fmt.Sprintf("conversion_rate:%s%s", currency, top5Currencies.BaseCurrency),
-			reversedRate,
-			0).Err()
+		updatedStr := apiResponse.Meta.LastUpdatedAt
+		parsedTime, err := time.Parse(time.RFC3339, updatedStr)
 		if err != nil {
 			return err
 		}
 
-		err = c.rdb.Set(
-			ctx,
-			fmt.Sprintf("conversion_rate:%s%s", top5Currencies.BaseCurrency, currency),
-			rate,
-			0).Err()
+		rateData, err := json.Marshal(CurrencyRateDto{
+			Rate:      rate,
+			UpdatedAt: parsedTime.Unix(),
+		})
 		if err != nil {
 			return err
 		}
+
+		reversedRateData, err := json.Marshal(CurrencyRateDto{
+			Rate:      reversedRate,
+			UpdatedAt: parsedTime.Unix(),
+		})
+		if err != nil {
+			return err
+		}
+
+		hashData[fmt.Sprintf("%s%s", currency, top5Currencies.BaseCurrency)] = reversedRateData
+		hashData[fmt.Sprintf("%s%s", top5Currencies.BaseCurrency, currency)] = rateData
 	}
+
+	err = c.rdb.HSet(ctx, currencyRateCacheKey, hashData).Err()
+	if err != nil {
+		return err
+	}
+	fmt.Println("Currency rate updated")
+	utils.InfoLog.Println("Currency rate updated")
 	return nil
 }
 
-func (c *Currency) fetchConversionRate(ctx context.Context, baseCurrency string, destinationCurrency string) (float64, error) {
+func (c *Currency) fetchConversionRate(ctx context.Context, baseCurrency string, destinationCurrency string) (*CurrencyRateDto, error) {
 	// Fetch conversion rate from cache
-	cacheKey := fmt.Sprintf("conversion_rate:%s%s", baseCurrency, destinationCurrency)
-	rate, err := c.rdb.Get(ctx, cacheKey).Result()
+	cacheKey := fmt.Sprintf("%s%s", baseCurrency, destinationCurrency)
+	rateDataStr, err := c.rdb.HGet(ctx, currencyRateCacheKey, cacheKey).Result()
 	if err == nil {
-		parsedRate, parseErr := strconv.ParseFloat(rate, 64)
-		if parseErr != nil {
-			return -1, parseErr
+		var rateData *CurrencyRateDto
+		err := json.Unmarshal([]byte(rateDataStr), &rateData)
+		if err != nil {
+			utils.ErrorLog.Printf("Failed to load cache of convertion rate: %v\n", err)
+			return nil, fmt.Errorf("failed to load cache")
 		}
-		return parsedRate, nil
-	}
-
-	// Check when reverse currency order
-	reversedCacheKey := fmt.Sprintf("conversion_rate:%s%s", destinationCurrency, baseCurrency)
-	rate, err = c.rdb.Get(ctx, reversedCacheKey).Result()
-	if err == nil {
-		parsedRate, parseErr := strconv.ParseFloat(rate, 64)
-		if parseErr != nil {
-			return -1, parseErr
-		}
-		if parsedRate == 0 {
-			return 0, nil
-		}
-		return 1.0 / parsedRate, nil
+		return rateData, nil
 	}
 
 	// Fetch conversion rate from API
 	apiResponse, err := c.fetchLatestConversionRate(baseCurrency, []string{destinationCurrency})
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 
 	// Save conversion rate to cache
-	err = c.rdb.Set(ctx, cacheKey, apiResponse.Data[destinationCurrency].Value, 0).Err()
+	rateData := &CurrencyRateDto{
+		Rate:      apiResponse.Data[destinationCurrency].Value,
+		UpdatedAt: time.Now().Unix(),
+	}
+	rateDataMarshal, err := json.Marshal(rateData)
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 
-	return apiResponse.Data[destinationCurrency].Value, nil
+	err = c.rdb.HSet(ctx, currencyRateCacheKey, cacheKey, rateDataMarshal).Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return rateData, nil
 }
 
 func (c *Currency) fetchLatestConversionRate(baseCurrency string, destinationCurrency []string) (*ConversionApiResponse, error) {
