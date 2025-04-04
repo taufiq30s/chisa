@@ -9,7 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type CurrencyApiCurrencyProperties struct {
+type currencyApiCurrencyProperties struct {
 	Symbol        string   `json:"symbol"`
 	Name          string   `json:"name"`
 	SymbolNative  string   `json:"symbol_native"`
@@ -21,22 +21,22 @@ type CurrencyApiCurrencyProperties struct {
 	Countries     []string `json:"countries"`
 }
 
-type CurrenciyApiCurrenciesResponse struct {
-	Data map[string]CurrencyApiCurrencyProperties `json:"data"`
+type currenciyApiCurrenciesResponse struct {
+	Data map[string]currencyApiCurrencyProperties `json:"data"`
 }
 
-type CurrencyApiRateMeta struct {
+type currencyApiRateMeta struct {
 	LastUpdatedAt string `json:"last_updated_at"`
 }
 
-type CurrencyApiRate struct {
+type currencyApiRate struct {
 	Code  string  `json:"code"`
 	Value float64 `json:"value"`
 }
 
-type CurrencyApiRateResponse struct {
-	Meta CurrencyApiRateMeta        `json:"meta"`
-	Data map[string]CurrencyApiRate `json:"data"`
+type currencyApiRateResponse struct {
+	Meta currencyApiRateMeta        `json:"meta"`
+	Data map[string]currencyApiRate `json:"data"`
 }
 
 type CurrencyAPI struct {
@@ -65,8 +65,8 @@ func (c *CurrencyAPI) GetCurrencies() ([]*discordgo.ApplicationCommandOptionChoi
 	return c.transformCurrencies(currencies), nil
 }
 
-func (c *CurrencyAPI) fetchCurrenciesFromApi() (*CurrenciyApiCurrenciesResponse, error) {
-	var response *CurrenciyApiCurrenciesResponse
+func (c *CurrencyAPI) fetchCurrenciesFromApi() (*currenciyApiCurrenciesResponse, error) {
+	var response *currenciyApiCurrenciesResponse
 	url := fmt.Sprintf("%s/%s/currencies?type=fiat", c.baseUrl, c.apiVersion)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -89,7 +89,7 @@ func (c *CurrencyAPI) fetchCurrenciesFromApi() (*CurrenciyApiCurrenciesResponse,
 	return response, nil
 }
 
-func (c *CurrencyAPI) transformCurrencies(currencies *CurrenciyApiCurrenciesResponse) []*discordgo.ApplicationCommandOptionChoice {
+func (c *CurrencyAPI) transformCurrencies(currencies *currenciyApiCurrenciesResponse) []*discordgo.ApplicationCommandOptionChoice {
 	var transformedCurrencies []*discordgo.ApplicationCommandOptionChoice
 	for _, currency := range currencies.Data {
 		transformedCurrencies = append(transformedCurrencies, &discordgo.ApplicationCommandOptionChoice{
@@ -117,8 +117,8 @@ func (c *CurrencyAPI) FetchCurrencyRate(source string, destination string) (*Cur
 	return result, nil
 }
 
-func (c *CurrencyAPI) fetchRateFromApi(source string, destination string) (*CurrencyApiRateResponse, error) {
-	var response *CurrencyApiRateResponse
+func (c *CurrencyAPI) fetchRateFromApi(source string, destination string) (*currencyApiRateResponse, error) {
+	var response *currencyApiRateResponse
 	url := fmt.Sprintf("%s/%s/latest?base_currency=%s&currencies=%s", c.baseUrl, c.apiVersion, source, destination)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -141,7 +141,7 @@ func (c *CurrencyAPI) fetchRateFromApi(source string, destination string) (*Curr
 	return response, nil
 }
 
-func (c *CurrencyAPI) transformRate(rate *CurrencyApiRateResponse, destination string) (*CurrencyRate, error) {
+func (c *CurrencyAPI) transformRate(rate *currencyApiRateResponse, destination string) (*CurrencyRate, error) {
 	parsedTime, err := time.Parse(time.RFC3339, rate.Meta.LastUpdatedAt)
 	if err != nil {
 		return nil, err

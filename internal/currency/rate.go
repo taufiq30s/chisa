@@ -11,30 +11,6 @@ import (
 	"github.com/taufiq30s/chisa/utils"
 )
 
-type ConversionMeta struct {
-	LastUpdatedAt string `json:"last_updated_at"`
-}
-
-type ConversionRate struct {
-	Code  string  `json:"code"`
-	Value float64 `json:"value"`
-}
-
-type ConversionApiResponse struct {
-	Meta ConversionMeta            `json:"meta"`
-	Data map[string]ConversionRate `json:"data"`
-}
-
-type UpdateCurrencyRateDto struct {
-	BaseCurrency        string
-	DestinationCurrency []string
-}
-
-type CurrencyRateDto struct {
-	Rate      float64 `json:"rate"`
-	UpdatedAt int64   `json:"updated_at"`
-}
-
 var currencyRateCacheKey = "currency_rate"
 var ttl_rate = 2 * time.Hour
 

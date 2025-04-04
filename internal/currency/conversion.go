@@ -17,7 +17,7 @@ type ConversionDto struct {
 	DestinationCurrency string
 }
 
-type ConversionResultDto struct {
+type conversionResultDto struct {
 	Result    float64
 	Rate      float64
 	UpdatedAt string
@@ -107,14 +107,14 @@ func (c *Currency) validateConversionInput(amount float64, baseCurrency string, 
 	return nil
 }
 
-func (c *Currency) calculateCurrency(amount float64, baseCurrency string, destinationCurrency string) (*ConversionResultDto, error) {
+func (c *Currency) calculateCurrency(amount float64, baseCurrency string, destinationCurrency string) (*conversionResultDto, error) {
 	// Fetch conversion rate
 	rateData, err := c.fetchConversionRate(context.Background(), baseCurrency, destinationCurrency)
 	if err != nil {
 		return nil, err
 	}
 	// Calculate conversion
-	return &ConversionResultDto{
+	return &conversionResultDto{
 		Result:    amount * rateData.Rate,
 		Rate:      rateData.Rate,
 		UpdatedAt: time.Unix(rateData.UpdatedAt, 0).Format("02 January 2006 15:04:05 MST"),

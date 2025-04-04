@@ -10,6 +10,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/taufiq30s/chisa/internal/bot"
+	"github.com/taufiq30s/chisa/internal/currency"
 	"github.com/taufiq30s/chisa/internal/handlers"
 	"github.com/taufiq30s/chisa/utils"
 )
@@ -40,17 +41,12 @@ func main() {
 		utils.ErrorLog.Fatalln(err)
 	}
 
-	currencyAPI, err := utils.GetEnv("WISE_TOKEN")
-	if err != nil {
-		utils.ErrorLog.Fatalln(err)
-	}
-
 	// Initialize bot and start bot
 	chisa.Start(token, guildId)
 
 	// Initialize Feature and Handlers
 	go chisa.InitializeMusicClient(&wg, guildId)
-	go chisa.InitializeCurrencyClient(&wg, currencyAPI)
+	go chisa.InitializeCurrencyClient(&wg, currency.WiseProvider)
 	go handlers.Register(&wg, &chisa, guildId)
 
 	wg.Wait()
