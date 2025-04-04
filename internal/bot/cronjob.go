@@ -24,20 +24,20 @@ func (chisa *Bot) CreateJobs() {
 		gocron.NewTask(chisa.updateScamDataset),
 	)
 	if err != nil {
-		utils.ErrorLog.Fatalf("Failed to create Job: %v", err)
+		fmt.Printf("Failed to create Job for Update Scam Dataset: %v\n", err)
+		utils.ErrorLog.Fatalf("Failed to create Job for Update Scam Dataset: %v\n", err)
 	}
 
-	// Update currency rate
 	_, err = schedule.NewJob(
 		gocron.DailyJob(1, gocron.NewAtTimes(gocron.NewAtTime(0, 0, 0))),
-		gocron.NewTask(func() {
-			ctx, done := context.WithCancel(context.Background())
-			defer done()
-
+		gocron.NewTask(func(ctx context.Context) {
 			chisa.Currency.UpdateCurrencyRate(ctx)
 		}),
+		gocron.WithName("Update Currency Rate"),
+		gocron.WithContext(context.Background()),
 	)
 	if err != nil {
-		utils.ErrorLog.Fatalf("Failed to create Job: %v", err)
+		fmt.Printf("Failed to create Job for Update Currency Rate: %v\n", err)
+		utils.ErrorLog.Fatalf("Failed to create Job for Update Currency Rate: %v\n", err)
 	}
 }
