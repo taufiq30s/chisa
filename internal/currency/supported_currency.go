@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -14,22 +12,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/taufiq30s/chisa/utils"
 )
-
-type CurrencyProperties struct {
-	Symbol        string   `json:"symbol"`
-	Name          string   `json:"name"`
-	SymbolNative  string   `json:"symbol_native"`
-	DecimalDigits int      `json:"decimal_digits"`
-	Rounding      float64  `json:"rounding"`
-	Code          string   `json:"code"`
-	NamePlural    string   `json:"name_plural"`
-	Type          string   `json:"type"`
-	Countries     []string `json:"countries"`
-}
-
-type CurrenciesApiResponse struct {
-	Data map[string]CurrencyProperties `json:"data"`
-}
 
 // GetCurrencies retrieves a list of supported currencies and returns them as Discord command options
 //
@@ -61,19 +43,11 @@ func (c *Currency) GetCurrencies(query string) []*discordgo.ApplicationCommandOp
 		return c.filterResult(query, c.supportedCurrencies)
 	}
 
-	apiData, err := c.fetchCurrenciesFromAPI()
+	currencies, err := c.provider.GetCurrencies()
 	if err != nil {
 		fmt.Printf("Error when fetching data: %v", err)
 		utils.ErrorLog.Printf("Error when fetching data: %v", err)
 		return nil
-	}
-
-	var currencies []*discordgo.ApplicationCommandOptionChoice
-	for _, value := range apiData.Data {
-		currencies = append(currencies, &discordgo.ApplicationCommandOptionChoice{
-			Name:  fmt.Sprintf("%s (%s)", value.Name, value.Code),
-			Value: value.Code,
-		})
 	}
 
 	// Sort the array by the "Name" field
@@ -131,52 +105,4 @@ func (c *Currency) filterResult(query string, data []*discordgo.ApplicationComma
 		return result
 	}
 	return result[:limit]
-}
-
-// fetchCurrenciesFromAPI retrieves currency data from the external API
-//
-// Makes an HTTP GET request to fetch supported fiat currencies from the API endpoint
-// Requires an API key token for authentication
-//
-// Returns:
-//   - CurrenciesApiResponse containing map of currency codes to their properties
-//   - Error if the request fails, returns non-200 status, or response parsing fails
-//
-// The response includes details like:
-//   - Currency name, code and symbol
-//   - Native symbol and plural name
-//   - Decimal digits and rounding
-//   - List of countries where used
-func (c *Currency) fetchCurrenciesFromAPI() (*CurrenciesApiResponse, error) {
-	var apiResponse *CurrenciesApiResponse
-	url := fmt.Sprintf("%s/currencies?type=fiat", baseUrl)
-
-	req, err := http.NewRequest("GET", url, nil)
-	req.Header.Add("apikey", c.token)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error when doing request: %v", resp.StatusCode)
-	}
-
-	resBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	// Store to apiResponse
-	err = json.Unmarshal(resBody, &apiResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get data from apiResponse
-	return apiResponse, nil
 }

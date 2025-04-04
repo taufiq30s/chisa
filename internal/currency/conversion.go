@@ -46,6 +46,8 @@ func (c *Currency) Conversion(s *discordgo.Session, i *discordgo.InteractionCrea
 	// calculate result and return value
 	result, err := c.calculateCurrency(data.Amount, data.BaseCurrency, data.DestinationCurrency)
 	if err != nil {
+		fmt.Println("Error when conversion :", err)
+		utils.ErrorLog.Println("Error when conversion :", err)
 		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
 			Feature: featureName,
 			Title:   "Conversion Failed",
@@ -56,7 +58,6 @@ func (c *Currency) Conversion(s *discordgo.Session, i *discordgo.InteractionCrea
 
 	// Show result to user
 	var strRate string
-	fmt.Println(result.Rate, result.Rate < 1)
 	if result.Rate < 1 {
 		strRate = fmt.Sprintf("%.5f", result.Rate)
 	} else {

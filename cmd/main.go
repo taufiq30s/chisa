@@ -40,7 +40,7 @@ func main() {
 		utils.ErrorLog.Fatalln(err)
 	}
 
-	currencyAPI, err := utils.GetEnv("CURRENCY_API")
+	currencyAPI, err := utils.GetEnv("WISE_TOKEN")
 	if err != nil {
 		utils.ErrorLog.Fatalln(err)
 	}

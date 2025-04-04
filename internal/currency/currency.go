@@ -5,33 +5,22 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/redis/go-redis/v9"
+	currencyapi "github.com/taufiq30s/chisa/internal/currency/api"
 )
 
-var baseUrl = "https://api.currencyapi.com/v3"
 var featureName = "Chisa Currency"
 
 type Currency struct {
 	client              *http.Client
-	token               string
 	rdb                 *redis.Client
+	provider            currencyapi.CurrencyProvider
 	supportedCurrencies []*discordgo.ApplicationCommandOptionChoice
-}
-
-var top5Currencies UpdateCurrencyRateDto = UpdateCurrencyRateDto{
-	BaseCurrency: "IDR",
-	DestinationCurrency: []string{
-		"USD",
-		"EUR",
-		"JPY",
-		"MYR",
-		"SGD",
-	},
 }
 
 func New(token string, rdb *redis.Client) Currency {
 	return Currency{
-		client: &http.Client{},
-		token:  token,
-		rdb:    rdb,
+		client:   &http.Client{},
+		provider: currencyapi.NewWise(token),
+		rdb:      rdb,
 	}
 }
