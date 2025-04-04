@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	currencyapi "github.com/taufiq30s/chisa/internal/currency/api"
@@ -35,6 +36,7 @@ type CurrencyRateDto struct {
 }
 
 var currencyRateCacheKey = "currency_rate"
+var ttl_rate = 2 * time.Hour
 
 func (c *Currency) fetchConversionRate(ctx context.Context, baseCurrency string, destinationCurrency string) (*currencyapi.CurrencyRate, error) {
 	// Fetch conversion rate from cache
@@ -63,6 +65,10 @@ func (c *Currency) fetchConversionRate(ctx context.Context, baseCurrency string,
 	}
 
 	err = c.rdb.HSet(ctx, currencyRateCacheKey, cacheKey, rateDataMarshal).Err()
+	if err != nil {
+		return nil, err
+	}
+	err = c.rdb.HExpire(ctx, currencyRateCacheKey, ttl_rate, cacheKey).Err()
 	if err != nil {
 		return nil, err
 	}
