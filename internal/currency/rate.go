@@ -31,21 +31,25 @@ func (c *Currency) fetchConversionRate(ctx context.Context, baseCurrency string,
 	// Fetch conversion rate from API
 	rate, err := c.provider.FetchCurrencyRate(baseCurrency, destinationCurrency)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 
 	// Save conversion rate to cache
 	rateDataMarshal, err := json.Marshal(rate)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 
 	err = c.rdb.HSet(ctx, currencyRateCacheKey, cacheKey, rateDataMarshal).Err()
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 	err = c.rdb.HExpire(ctx, currencyRateCacheKey, ttl_rate, cacheKey).Err()
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 

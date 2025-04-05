@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/taufiq30s/chisa/utils"
 )
 
 type currencyApiCurrencyProperties struct {
@@ -71,18 +72,21 @@ func (c *CurrencyAPI) fetchCurrenciesFromApi() (*currenciyApiCurrenciesResponse,
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 	req.Header.Add("apiKey", c.token)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 
@@ -123,18 +127,21 @@ func (c *CurrencyAPI) fetchRateFromApi(source string, destination string) (*curr
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 	req.Header.Add("apiKey", c.token)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 
@@ -144,6 +151,7 @@ func (c *CurrencyAPI) fetchRateFromApi(source string, destination string) (*curr
 func (c *CurrencyAPI) transformRate(rate *currencyApiRateResponse, destination string) (*CurrencyRate, error) {
 	parsedTime, err := time.Parse(time.RFC3339, rate.Meta.LastUpdatedAt)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 

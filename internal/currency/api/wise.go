@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/taufiq30s/chisa/utils"
 )
 
 type WiseCurrencyProperties struct {
@@ -55,18 +56,21 @@ func (w *Wise) fetchCurrenciesFromApi() ([]*WiseCurrencyProperties, error) {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", w.token))
 
 	resp, err := w.client.Do(req)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 
@@ -100,18 +104,21 @@ func (w *Wise) fetchRateFromApi(source string, destination string) (*WiseRateRes
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", w.token))
 
 	resp, err := w.client.Do(req)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 
@@ -121,6 +128,7 @@ func (w *Wise) fetchRateFromApi(source string, destination string) (*WiseRateRes
 func (w *Wise) transformRate(rate *WiseRateResponse) (*CurrencyRate, error) {
 	parsedTime, err := time.Parse("2006-01-02T15:04:05-0700", rate.Time)
 	if err != nil {
+		utils.ErrorLog.Println(err)
 		return nil, err
 	}
 

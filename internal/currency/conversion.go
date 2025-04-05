@@ -46,12 +46,10 @@ func (c *Currency) Conversion(s *discordgo.Session, i *discordgo.InteractionCrea
 	// calculate result and return value
 	result, err := c.calculateCurrency(data.Amount, data.BaseCurrency, data.DestinationCurrency)
 	if err != nil {
-		fmt.Println("Error when conversion :", err)
-		utils.ErrorLog.Println("Error when conversion :", err)
 		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
-			Feature: featureName,
-			Title:   "Conversion Failed",
-			Err:     err,
+			Feature:     featureName,
+			Title:       "Conversion Failed",
+			Description: "Please try again later or contact Pengasuh Anak",
 		}).ExecuteDefer()
 		return
 	}
