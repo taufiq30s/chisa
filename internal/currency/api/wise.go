@@ -26,19 +26,25 @@ type WiseRateResponse struct {
 }
 
 type Wise struct {
-	client     *http.Client
-	token      string
-	baseUrl    string
-	apiVersion string
+	providerName string
+	client       *http.Client
+	token        string
+	baseUrl      string
+	apiVersion   string
 }
 
 func NewWise(token string) *Wise {
 	return &Wise{
-		client:     &http.Client{},
-		token:      token,
-		baseUrl:    "https://api.wise.com",
-		apiVersion: "v1",
+		providerName: "Wise",
+		client:       &http.Client{},
+		token:        token,
+		baseUrl:      "https://api.wise.com",
+		apiVersion:   "v1",
 	}
+}
+
+func (w *Wise) GetProviderName() string {
+	return w.providerName
 }
 
 func (w *Wise) GetCurrencies() ([]*discordgo.ApplicationCommandOptionChoice, error) {

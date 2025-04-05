@@ -79,12 +79,19 @@ func (c *Currency) Conversion(s *discordgo.Session, i *discordgo.InteractionCrea
 					strRate,
 					data.DestinationCurrency,
 				),
+				Inline: true,
 			},
 			{
-				Name:  "Last updated",
-				Value: result.UpdatedAt,
+				Name:   "Last updated",
+				Value:  result.UpdatedAt,
+				Inline: true,
+			},
+			{
+				Name:  "Powered by",
+				Value: c.provider.GetProviderName(),
 			},
 		}),
+		responses.SetColor("42F30B"),
 	)
 	responses.InteractionResponse(s, i.Interaction).WithEmbed(body).SendDefer()
 }

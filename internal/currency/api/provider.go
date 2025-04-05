@@ -8,6 +8,7 @@ type CurrencyRate struct {
 }
 
 type CurrencyProvider interface {
+	GetProviderName() string
 	GetCurrencies() ([]*discordgo.ApplicationCommandOptionChoice, error)
 	FetchCurrencyRate(source string, destination string) (*CurrencyRate, error)
 }

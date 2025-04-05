@@ -41,19 +41,25 @@ type currencyApiRateResponse struct {
 }
 
 type CurrencyAPI struct {
-	client     *http.Client
-	token      string
-	baseUrl    string
-	apiVersion string
+	providerName string
+	client       *http.Client
+	token        string
+	baseUrl      string
+	apiVersion   string
 }
 
 func NewCurrencyApi(token string) *CurrencyAPI {
 	return &CurrencyAPI{
-		client:     &http.Client{},
-		token:      token,
-		baseUrl:    "https://api.currencyapi.com",
-		apiVersion: "v3",
+		providerName: "currencyapi.com",
+		client:       &http.Client{},
+		token:        token,
+		baseUrl:      "https://api.currencyapi.com",
+		apiVersion:   "v3",
 	}
+}
+
+func (c *CurrencyAPI) GetProviderName() string {
+	return c.providerName
 }
 
 func (c *CurrencyAPI) GetCurrencies() ([]*discordgo.ApplicationCommandOptionChoice, error) {
