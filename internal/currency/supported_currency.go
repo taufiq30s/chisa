@@ -43,6 +43,11 @@ func (c *Currency) GetCurrencies(query string) []*discordgo.ApplicationCommandOp
 		return c.filterResult(query, c.supportedCurrencies)
 	}
 
+	if c.provider == nil {
+		fmt.Println("Currency: Provider is not set")
+		utils.ErrorLog.Println("Currency: Provider is not set")
+		return nil
+	}
 	currencies, err := c.provider.GetCurrencies()
 	if err != nil {
 		fmt.Printf("Error when fetching data: %v", err)

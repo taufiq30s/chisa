@@ -29,6 +29,11 @@ func (c *Currency) fetchConversionRate(ctx context.Context, baseCurrency string,
 	}
 
 	// Fetch conversion rate from API
+	if c.provider == nil {
+		utils.ErrorLog.Println("Currency Provider is not set")
+		fmt.Println("Currency Provider is not set")
+		return nil, fmt.Errorf("currency provider is not set")
+	}
 	rate, err := c.provider.FetchCurrencyRate(baseCurrency, destinationCurrency)
 	if err != nil {
 		utils.ErrorLog.Println(err)

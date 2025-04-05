@@ -44,6 +44,9 @@ func New(provider string, rdb *redis.Client) Currency {
 	case "wise":
 		token := getToken("WISE_TOKEN")
 		currency.provider = currencyapi.NewWise(token)
+	default:
+		utils.ErrorLog.Printf("Invalid Currency Provider \"%s\"\n", provider)
+		fmt.Printf("Invalid Currency Provider \"%s\"\n", provider)
 	}
 	return currency
 }
