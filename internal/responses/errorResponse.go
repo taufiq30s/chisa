@@ -1,6 +1,8 @@
 package responses
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/bwmarrin/discordgo"
+)
 
 type ErrorResponseData struct {
 	Feature     string
@@ -11,14 +13,18 @@ type ErrorResponseData struct {
 type errorResponse struct {
 	session     *discordgo.Session
 	interaction *discordgo.InteractionCreate
+	response    *discordgo.InteractionResponse
 	embed       *discordgo.MessageEmbed
 }
 
-func ErrorResponse(session *discordgo.Session, interaction *discordgo.InteractionCreate, data *ErrorResponseData) errorResponse {
-	return errorResponse{
-		session,
-		interaction,
-		CreateMessageEmbed(
+func ErrorResponse(session *discordgo.Session, interaction *discordgo.InteractionCreate, data *ErrorResponseData) *errorResponse {
+	return &errorResponse{
+		session:     session,
+		interaction: interaction,
+		response: &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+		},
+		embed: CreateMessageEmbed(
 			session,
 			data.Title,
 			func() string {
@@ -32,21 +38,20 @@ func ErrorResponse(session *discordgo.Session, interaction *discordgo.Interactio
 		),
 	}
 }
-func (res errorResponse) Execute() error {
-	return res.session.InteractionRespond(
-		res.interaction.Interaction,
-		&discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Embeds: []*discordgo.MessageEmbed{
-					res.embed,
-				},
-			},
-		},
-	)
+func (res *errorResponse) SetResponseTypeAsUpdate() *errorResponse {
+	res.response = &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+	}
+	return res
+}
+func (res *errorResponse) Execute() error {
+	res.response.Data = &discordgo.InteractionResponseData{
+		Embeds: []*discordgo.MessageEmbed{res.embed},
+	}
+	return res.session.InteractionRespond(res.interaction.Interaction, res.response)
 }
 
-func (res errorResponse) ExecuteDefer() error {
+func (res *errorResponse) ExecuteDefer() error {
 	edit := &discordgo.WebhookEdit{
 		Embeds: &[]*discordgo.MessageEmbed{res.embed},
 	}

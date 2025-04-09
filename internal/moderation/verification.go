@@ -32,6 +32,7 @@ func SendRequestVerificationHandle(s *discordgo.Session, i *discordgo.Interactio
 			"Moderation",
 			responses.SetColor("df0000"),
 		))
+		return
 	}
 
 	embed := responses.CreateMessageEmbed(
@@ -42,7 +43,7 @@ func SendRequestVerificationHandle(s *discordgo.Session, i *discordgo.Interactio
 		responses.SetColor("0bdd47"),
 	)
 
-	responses.InteractionResponse(s, i.Interaction).WithEmbed(embed).Send()
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(embed).SetEphemeral().Send()
 }
 
 func SendRequestVerificationToAdmin(s *discordgo.Session, newMember *discordgo.User, modChannel string) error {
@@ -86,7 +87,7 @@ func SendRequestVerificationToAdmin(s *discordgo.Session, newMember *discordgo.U
 
 // Handle when admin accept request by add "verify" role and send
 // Welcome message to "welcome" channel.
-func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
+func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCreate, params ...any) {
 	var responseEmbed *discordgo.MessageEmbed
 	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
 
@@ -142,61 +143,58 @@ func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 
 	// Assign "verify" role to new member and send status response to moderator
-	go func() {
-		err := s.GuildMemberRoleAdd(i.Interaction.GuildID, memberId, verifiedRoleId)
-		if err != nil {
-			utils.ErrorLog.Println(err)
-			responses.ErrorResponse(
-				s,
-				i,
-				&responses.ErrorResponseData{
-					Feature: featureName,
-					Title:   "Failed to process request",
-					Description: fmt.Sprintf(`Sorry, your request failed to process!
+	err = s.GuildMemberRoleAdd(i.Interaction.GuildID, memberId, verifiedRoleId)
+	if err != nil {
+		utils.ErrorLog.Println(err)
+		responses.ErrorResponse(
+			s,
+			i,
+			&responses.ErrorResponseData{
+				Feature: featureName,
+				Title:   "Failed to process request",
+				Description: fmt.Sprintf(`Sorry, your request failed to process!
 					Detail:
 					%s`, err.Error()),
-				},
-			).Execute()
-		}
-		responseEmbed = responses.CreateMessageEmbed(
-			s,
-			"Accepted New Member Success",
-			fmt.Sprintf(
-				"%s has been processed to get channel access and assign “verified” role.",
-				member.User.GlobalName),
-			featureName,
-			responses.SetColor("0bdd47"),
-		)
+			},
+		).SetResponseTypeAsUpdate().Execute()
+		return
+	}
+	responseEmbed = responses.CreateMessageEmbed(
+		s,
+		"Accepted New Member Success",
+		fmt.Sprintf(
+			"%s has been processed to get channel access and assign “verified” role.",
+			member.User.GlobalName),
+		featureName,
+		responses.SetColor("0bdd47"),
+	)
 
-		// Send response to moderator
-		responses.InteractionResponse(s, i.Interaction).WithEmbed(responseEmbed).Send()
-	}()
+	// Send response to moderator
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(responseEmbed).SetResponseTypeAsUpdate().Send()
 
 	// Send welcome message to new member in "welcome" channel
-	go func() {
-		responseEmbed = responses.CreateMessageEmbed(
-			s,
-			fmt.Sprintf("Welcome to %s", s.State.Guilds[0].Name),
-			fmt.Sprintf(`Hello <@%s>, welcome to %s.
-					Please see the server rules at <#%s>.
-					If you have any questions or suggestions, please ask \"Pengasuh Anak\"`,
-				memberId, s.State.Guilds[0].Name, ruleChannelId,
-			),
-			featureName,
-			responses.SetColor("0bdd47"),
-		)
+	responseEmbed = responses.CreateMessageEmbed(
+		s,
+		fmt.Sprintf("Welcome to %s", s.State.Guilds[0].Name),
+		fmt.Sprintf(`Hello <@%s>, welcome to %s.
+				Please see the server rules at <#%s>.
+				If you have any questions or suggestions, please ask \"Pengasuh Anak\"`,
+			memberId, s.State.Guilds[0].Name, ruleChannelId,
+		),
+		featureName,
+		responses.SetColor("0bdd47"),
+	)
 
-		s.ChannelMessageSendEmbed(
-			welcomeChannelId,
-			responseEmbed,
-		)
-	}()
+	s.ChannelMessageSendEmbed(
+		welcomeChannelId,
+		responseEmbed,
+	)
 }
 
 // Handle when admin reject request then kick rejected new member
 // from server and send DM to confirm to people who give
 // him invitation link
-func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
+func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCreate, params ...any) {
 	var responseEmbed *discordgo.MessageEmbed
 	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
 
@@ -215,7 +213,7 @@ func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCrea
 					Title:       "Failed to process request",
 					Description: "Sorry, your request failed to process because `member id` not found!",
 				},
-			).Execute()
+			).SetResponseTypeAsUpdate().Execute()
 		}
 		return
 	}
@@ -234,72 +232,71 @@ func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCrea
 				Detail:
 				%s`, err.Error()),
 			},
-		).Execute()
+		).SetResponseTypeAsUpdate().Execute()
+		return
+	}
+
+	// Send DM to rejected member
+	responseEmbed = responses.CreateMessageEmbed(
+		s,
+		"Verification Rejected",
+		`Sorry, your request was rejected!
+		Please contact the source of the invitation link for further confirmation`,
+		featureName,
+		responses.SetColor("df0000"),
+	)
+	_, err = s.ChannelMessageSendEmbed(
+		userChannel.ID, responseEmbed)
+	if err != nil {
+		utils.ErrorLog.Println(err)
+		// Send error message
+		responseEmbed = responses.CreateMessageEmbed(
+			s,
+			"Failed to send DM",
+			fmt.Sprintf(`Sorry, your request failed to process!
+			Detail:
+			%s`, err.Error()),
+			featureName,
+			responses.SetColor("df0000"),
+		)
+		s.ChannelMessageSendEmbed(
+			i.Interaction.ChannelID,
+			responseEmbed,
+		)
+		return
 	}
 
 	// Kick Member
-	go func() {
-		err := s.GuildMemberDeleteWithReason(
-			i.Interaction.GuildID,
-			memberId,
-			"Request rejected by admin",
-		)
-		if err != nil {
-			utils.ErrorLog.Println(err)
-			responses.ErrorResponse(
-				s,
-				i,
-				&responses.ErrorResponseData{
-					Feature: featureName,
-					Title:   "Failed to process request",
-					Description: fmt.Sprintf(`Sorry, your request failed to process!
-					Detail:
-					%s`, err.Error()),
-				},
-			).Execute()
-		}
-
-		// Send response to admin
-		responseEmbed = responses.CreateMessageEmbed(
+	err = s.GuildMemberDeleteWithReason(
+		i.Interaction.GuildID,
+		memberId,
+		"Request rejected by admin",
+	)
+	if err != nil {
+		utils.ErrorLog.Println(err)
+		responses.ErrorResponse(
 			s,
-			"Rejected New Member Success",
-			fmt.Sprintf(
-				"%s has been rejected and kicked from server.",
-				member.User.GlobalName),
-			featureName,
-			responses.SetColor("df0000"),
-		)
-		responses.InteractionResponse(s, i.Interaction).WithEmbed(responseEmbed).Send()
-	}()
-
-	// Send DM to rejected member
-	go func() {
-		responseEmbed = responses.CreateMessageEmbed(
-			s,
-			"Verification Rejected",
-			`Sorry, your request was rejected!
-			Please contact the source of the invitation link for further confirmation`,
-			featureName,
-			responses.SetColor("df0000"),
-		)
-		_, err = s.ChannelMessageSendEmbed(
-			userChannel.ID, responseEmbed)
-		if err != nil {
-			utils.ErrorLog.Println(err)
-			// Send error message
-			responseEmbed = responses.CreateMessageEmbed(
-				s,
-				"Failed to send DM",
-				fmt.Sprintf(`Sorry, your request failed to process!
+			i,
+			&responses.ErrorResponseData{
+				Feature: featureName,
+				Title:   "Failed to process request",
+				Description: fmt.Sprintf(`Sorry, your request failed to process!
 				Detail:
 				%s`, err.Error()),
-				featureName,
-				responses.SetColor("df0000"),
-			)
-			s.ChannelMessageSendEmbed(
-				i.Interaction.ChannelID,
-				responseEmbed,
-			)
-		}
-	}()
+			},
+		).SetResponseTypeAsUpdate().Execute()
+		return
+	}
+
+	// Send response to admin
+	responseEmbed = responses.CreateMessageEmbed(
+		s,
+		"Rejected New Member Success",
+		fmt.Sprintf(
+			"%s has been rejected and kicked from server.",
+			member.User.GlobalName),
+		featureName,
+		responses.SetColor("df0000"),
+	)
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(responseEmbed).SetResponseTypeAsUpdate().Send()
 }

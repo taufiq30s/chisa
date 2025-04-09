@@ -113,6 +113,10 @@ func (r *interactionResponse) Send() error {
 		r.response.Data.Components = r.components
 	}
 
+	if r.ephemeral {
+		r.response.Data.Flags = discordgo.MessageFlagsEphemeral
+	}
+
 	return r.session.InteractionRespond(r.interaction, r.response)
 }
 
