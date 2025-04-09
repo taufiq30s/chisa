@@ -190,8 +190,6 @@ func SimulateWiseTransfer(amount float64, baseCurrency string, destinationCurren
 		fmt.Println(err)
 		return nil, err
 	}
-	fmt.Println(string(bodyJSON))
-	// return nil, fmt.Errorf("debug")
 
 	// Prepare request
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyJSON))
@@ -233,7 +231,7 @@ func SimulateWiseTransfer(amount float64, baseCurrency string, destinationCurren
 	return &WiseSimulate{
 		Amount:        response.PaymentOptions[0].SourceAmount,
 		WiseFee:       float64(response.PaymentOptions[0].Fee.Total),
-		Total:         response.PaymentOptions[0].SourceAmount + float64(response.PaymentOptions[0].Fee.Total),
+		Total:         response.PaymentOptions[0].SourceAmount,
 		ReceivedTotal: response.PaymentOptions[0].TargetAmount,
 		Rate:          1.0 / response.Rate,
 		UpdatedAt:     parserTime.Unix(),

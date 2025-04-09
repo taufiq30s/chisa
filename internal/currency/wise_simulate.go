@@ -56,7 +56,7 @@ func (c *Currency) SimulateWise(s *discordgo.Session, i *discordgo.InteractionCr
 	}
 	body := responses.CreateMessageEmbed(
 		s, "Wise Send Money Simulation",
-		"**Note: This is simulation, not actual transaction. Fee doesn't include VAT.**",
+		"**Note:\n- This is simulation, not actual transaction. \n- Fee doesn't include VAT.**",
 		featureName,
 		responses.SetFields([]*discordgo.MessageEmbedField{
 			{
