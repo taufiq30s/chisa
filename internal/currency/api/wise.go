@@ -1,6 +1,7 @@
 package currencyapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -142,4 +143,112 @@ func (w *Wise) transformRate(rate *WiseRateResponse) (*CurrencyRate, error) {
 		Rate:      rate.Rate,
 		UpdatedAt: parsedTime.Unix(),
 	}, nil
+}
+
+type wiseQuote struct {
+	Rate           float64 `json:"rate"`
+	RateTimestamp  string  `json:"rateTimestamp"`
+	PaymentOptions []struct {
+		SourceCurrency string  `json:"sourceCurrency"`
+		TargetCurrency string  `json:"targetCurrency"`
+		SourceAmount   float64 `json:"sourceAmount"`
+		TargetAmount   float64 `json:"targetAmount"`
+		Fee            struct {
+			Total float64 `json:"total"`
+		} `json:"fee"`
+	} `json:"paymentOptions"`
+}
+
+type wiseQuoteBody struct {
+	SourceCurrency string  `json:"sourceCurrency"`
+	TargetCurrency string  `json:"targetCurrency"`
+	SourceAmount   float64 `json:"sourceAmount,omitempty"`
+	TargetAmount   float64 `json:"targetAmount,omitempty"`
+}
+
+type WiseSimulate struct {
+	Amount        float64
+	WiseFee       float64
+	Total         float64
+	ReceivedTotal float64
+	Rate          float64
+	UpdatedAt     int64
+}
+
+func SimulateWiseTransfer(amount float64, baseCurrency string, destinationCurrency string, isSourceAmount bool) (*WiseSimulate, error) {
+	var response *wiseQuote
+	var baseUrl = "https://api.wise.com"
+	var client = &http.Client{}
+
+	url := fmt.Sprintf("%s/v3/quotes/", baseUrl)
+
+	// Prepare body
+	body := createQuoteBody(amount, baseCurrency, destinationCurrency, isSourceAmount)
+	bodyJSON, err := json.Marshal(body)
+	if err != nil {
+		utils.ErrorLog.Println(err)
+		fmt.Println(err)
+		return nil, err
+	}
+	fmt.Println(string(bodyJSON))
+	// return nil, fmt.Errorf("debug")
+
+	// Prepare request
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyJSON))
+	if err != nil {
+		utils.ErrorLog.Println(err)
+		fmt.Println(err)
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	// Execute request
+	resp, err := client.Do(req)
+	if err != nil {
+		utils.ErrorLog.Println(err)
+		fmt.Println(err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		utils.ErrorLog.Printf("failed to simulate wise quote: %s\n", resp.Status)
+		return nil, fmt.Errorf("failed to simulate wise quote: %s", resp.Status)
+	}
+
+	// Extract response body
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		utils.ErrorLog.Println(err)
+		return nil, err
+	}
+
+	// Formating output
+	parserTime, err := time.Parse(time.RFC3339, response.RateTimestamp)
+	if err != nil {
+		utils.ErrorLog.Println(err)
+		return nil, err
+	}
+
+	return &WiseSimulate{
+		Amount:        response.PaymentOptions[0].SourceAmount,
+		WiseFee:       float64(response.PaymentOptions[0].Fee.Total),
+		Total:         response.PaymentOptions[0].SourceAmount + float64(response.PaymentOptions[0].Fee.Total),
+		ReceivedTotal: response.PaymentOptions[0].TargetAmount,
+		Rate:          1.0 / response.Rate,
+		UpdatedAt:     parserTime.Unix(),
+	}, nil
+}
+
+func createQuoteBody(amount float64, baseCurrency string, destinationCurrency string, isSourceAmount bool) *wiseQuoteBody {
+	body := &wiseQuoteBody{
+		SourceCurrency: baseCurrency,
+		TargetCurrency: destinationCurrency,
+	}
+	if isSourceAmount {
+		body.SourceAmount = amount
+	} else {
+		body.TargetAmount = amount
+	}
+	return body
 }

@@ -12,7 +12,7 @@ import (
 var (
 	currencyCommandOptions = func(chisa *bot.Bot, interaction *discordgo.InteractionCreate) {
 		switch options := interaction.ApplicationCommandData().Options; options[0].Name {
-		case "convert":
+		case "convert", "simulate":
 			var choices []*discordgo.ApplicationCommandOptionChoice
 
 			for _, option := range interaction.ApplicationCommandData().Options[0].Options {
@@ -36,15 +36,24 @@ var (
 	currencyCommandHandler = func(chisa *bot.Bot, interaction *discordgo.InteractionCreate) {
 		switch options := interaction.ApplicationCommandData().Options; options[0].Name {
 		case "convert":
-			switch interaction.Type {
-			case discordgo.InteractionApplicationCommand:
-				data := interaction.ApplicationCommandData()
-				chisa.Currency.Conversion(chisa.Session, interaction, &currency.ConversionDto{
-					Amount:              data.Options[0].Options[0].FloatValue(),
-					BaseCurrency:        data.Options[0].Options[1].StringValue(),
-					DestinationCurrency: data.Options[0].Options[2].StringValue(),
-				})
+			data := interaction.ApplicationCommandData()
+			chisa.Currency.Conversion(chisa.Session, interaction, &currency.ConversionDto{
+				Amount:              data.Options[0].Options[0].FloatValue(),
+				BaseCurrency:        data.Options[0].Options[1].StringValue(),
+				DestinationCurrency: data.Options[0].Options[2].StringValue(),
+			})
+		case "simulate":
+			data := interaction.ApplicationCommandData()
+			isSourceAmount := true
+			if data.Options[0].Options[0].StringValue() == "receiver" {
+				isSourceAmount = false
 			}
+			chisa.Currency.SimulateWise(chisa.Session, interaction, &currency.WiseSimulateDto{
+				Amount:              data.Options[0].Options[1].FloatValue(),
+				BaseCurrency:        data.Options[0].Options[2].StringValue(),
+				DestinationCurrency: data.Options[0].Options[3].StringValue(),
+				IsSourceAmount:      isSourceAmount,
+			})
 		}
 	}
 	currencyCommands = []*discordgo.ApplicationCommand{
@@ -74,6 +83,49 @@ var (
 						{
 							Name:         "to",
 							Description:  "Currency to convert to",
+							Type:         discordgo.ApplicationCommandOptionString,
+							Required:     true,
+							Autocomplete: true,
+						},
+					},
+				},
+				{
+					Name:        "simulate",
+					Description: "Simulate Wise Transfer",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "mode",
+							Description: "Mode of amount's currency.",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "Using Source Currency",
+									Value: "send",
+								},
+								{
+									Name:  "Using Target Currency",
+									Value: "receiver",
+								},
+							},
+						},
+						{
+							Name:        "amount",
+							Description: "Amount to simulate",
+							Type:        discordgo.ApplicationCommandOptionNumber,
+							Required:    true,
+						},
+						{
+							Name:         "source",
+							Description:  "Source Currency of Sender",
+							Type:         discordgo.ApplicationCommandOptionString,
+							Required:     true,
+							Autocomplete: true,
+						},
+						{
+							Name:         "target",
+							Description:  "Target Currency of Receiver",
 							Type:         discordgo.ApplicationCommandOptionString,
 							Required:     true,
 							Autocomplete: true,
