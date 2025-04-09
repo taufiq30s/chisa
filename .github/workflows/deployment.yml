@@ -8,6 +8,9 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build image and upload it to VPS
