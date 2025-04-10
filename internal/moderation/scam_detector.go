@@ -22,20 +22,15 @@ var (
 	ctx               = context.Background()
 	BanScammerHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
 		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Embeds: []*discordgo.MessageEmbed{
-					responses.CreateMessageEmbed(s,
-						"Ban Successful",
-						fmt.Sprintf(
-							"<@%s> has been banned.", userId),
-						"Moderation",
-						responses.SetColor("0bdd47"),
-					),
-				},
-			},
-		})
+		err := responses.InteractionResponse(s, i.Interaction).WithEmbed(
+			responses.CreateMessageEmbed(s,
+				"Ban Successful",
+				fmt.Sprintf(
+					"<@%s> has been banned.", userId),
+				"Moderation",
+				responses.SetColor("0bdd47"),
+			),
+		).SetResponseTypeAsUpdate().Send()
 		if err != nil {
 			utils.ErrorLog.Println(err)
 		}
@@ -43,19 +38,14 @@ var (
 	}
 	RemoveSuspectHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
 		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Embeds: []*discordgo.MessageEmbed{
-					responses.CreateMessageEmbed(s,
-						"Remove timeout successful",
-						"Timeout removed.",
-						"Moderation",
-						responses.SetColor("0bdd47"),
-					),
-				},
-			},
-		})
+		err := responses.InteractionResponse(s, i.Interaction).WithEmbed(
+			responses.CreateMessageEmbed(s,
+				"Remove timeout successful",
+				"Timeout removed.",
+				"Moderation",
+				responses.SetColor("0bdd47"),
+			),
+		).SetResponseTypeAsUpdate().Send()
 		if err != nil {
 			utils.ErrorLog.Println(err)
 		}
@@ -234,6 +224,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 			footer,
 			color,
 		))
+		return
 	}
 	err = s.GuildMemberTimeout(m.GuildID, m.Author.ID, &timeout)
 	if err != nil {
@@ -246,6 +237,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 			footer,
 			color,
 		))
+		return
 	}
 	err = s.ChannelMessageDelete(m.ChannelID, m.ID)
 	if err != nil {
@@ -258,5 +250,6 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 			footer,
 			color,
 		))
+		return
 	}
 }
