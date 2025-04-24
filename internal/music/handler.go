@@ -45,7 +45,6 @@ func (m *MusicBot) onPlayerUpdate(player disgolink.Player, _ lavalink.PlayerUpda
 
 func (m *MusicBot) onTrackStart(player disgolink.Player, event lavalink.TrackStartEvent) {
 	trackState := m.getFirstTrack()
-	m.lastPosition = -1
 	m.generateMusicInformation(
 		trackState,
 		"Now Playing",

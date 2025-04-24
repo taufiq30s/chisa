@@ -1,13 +1,14 @@
-FROM golang:1.23 AS builder
+FROM golang:alpine AS builder
 
 WORKDIR /app
 
-## Copy master and install that packages
+## Copy master
 COPY . .
-RUN go mod download
+ENV GOARCH=arm64 GOOS=linux CGO_ENABLED=0
 
-## Copy master then build in arm based processor
-RUN env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -v -o chisa cmd/main.go
+## Check packages and build in arm based processor
+RUN go mod tidy
+RUN go build -v -o chisa cmd/main.go
 
 ## Use alpine image to execute binary
 FROM alpine:latest

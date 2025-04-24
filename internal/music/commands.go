@@ -52,7 +52,6 @@ func (m *MusicBot) Load(s *discordgo.Session, i *discordgo.InteractionCreate, da
 
 	m.Client.BestNode().LoadTracksHandler(ctx, data, disgolink.NewResultHandler(
 		func(track lavalink.Track) {
-			fmt.Println("Start 1")
 			if m.player.Track() == nil {
 				playingTrack = &track
 			}
@@ -72,14 +71,14 @@ func (m *MusicBot) Load(s *discordgo.Session, i *discordgo.InteractionCreate, da
 				Feature:     m.featureName,
 				Title:       "No tracks found",
 				Description: "No tracks found for: " + data,
-			}).Execute()
+			}).ExecuteDefer()
 		},
 		func(err error) {
 			responses.ErrorResponse(s, i, &responses.ErrorResponseData{
 				Feature:     m.featureName,
 				Title:       "Invalid URL",
 				Description: "The provider URL is invalid.",
-			}).Execute()
+			}).ExecuteDefer()
 			utils.ErrorLog.Println(err.Error())
 			fmt.Println(err)
 		}))
