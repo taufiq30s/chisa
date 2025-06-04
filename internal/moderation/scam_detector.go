@@ -53,14 +53,6 @@ var (
 	}
 )
 
-func getLogChannel() string {
-	logChannel, err := utils.GetEnv("CHISA_LOG_CHANNEL_ID")
-	if err != nil {
-		utils.ErrorLog.Println(err)
-	}
-	return logChannel
-}
-
 // Update Scam Links
 // This feature using dataset from The DSP Project
 //

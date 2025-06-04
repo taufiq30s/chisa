@@ -21,6 +21,31 @@ func SendRequestVerificationHandle(s *discordgo.Session, i *discordgo.Interactio
 		logChannel = getLogChannel()
 	)
 
+	// Check member has @verified role and executed in specific channel
+	// if yes, return message
+	if i.ChannelID != getVerificationChannelId() {
+		embed := responses.CreateMessageEmbed(
+			s,
+			"Wrong Channel",
+			"You can only use this command in the **verification** channel.",
+			featureName,
+			responses.SetColor("df0000"),
+		)
+		responses.InteractionResponse(s, i.Interaction).WithEmbed(embed).SetEphemeral().Send()
+		return
+	}
+	if slices.Contains(i.Member.Roles, getVerifiedRoleId()) {
+		embed := responses.CreateMessageEmbed(
+			s,
+			"You are already verified",
+			"You already have the **verified** role, which means you've completed the verification process successfully. There's no need to use the **/verify** command again.\n\nIf you believe this is a mistake or you lost access to certain channels, please contact **\"Pengasuh Anak\"**.",
+			featureName,
+			responses.SetColor("df0000"),
+		)
+		responses.InteractionResponse(s, i.Interaction).WithEmbed(embed).SetEphemeral().Send()
+		return
+	}
+
 	err := SendRequestVerificationToAdmin(s, i.Member.User, modChannel)
 	if err != nil {
 		utils.ErrorLog.Println(err)
@@ -90,12 +115,7 @@ func SendRequestVerificationToAdmin(s *discordgo.Session, newMember *discordgo.U
 func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCreate, params ...any) {
 	var responseEmbed *discordgo.MessageEmbed
 	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
-
-	verifiedRoleId, err := utils.GetEnv("AKASHIC_VERIFIED_ROLE_ID")
-	if err != nil {
-		utils.ErrorLog.Println(err)
-		return
-	}
+	verifiedRoleId = getVerifiedRoleId()
 
 	welcomeChannelId, err := utils.GetEnv("AKASHIC_WELCOME_CHANNEL_ID")
 	if err != nil {
