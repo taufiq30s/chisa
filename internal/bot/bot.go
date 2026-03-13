@@ -69,9 +69,9 @@ func (bot *Bot) InitializeMusicClient(wg *sync.WaitGroup, guildId string) {
 		bot.Session.State.User.ID,
 		guildId,
 	)
-	musicBot.ConnectToNodes()
-	musicBot.InitializeListenerFunctions()
-	go musicBot.InitializeCleanSearchCache()
+	// musicBot.ConnectToNodes()
+	// musicBot.InitializeListenerFunctions()
+	// go musicBot.InitializeCleanSearchCache()
 	bot.Music = musicBot
 }
 

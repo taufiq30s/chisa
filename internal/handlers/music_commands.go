@@ -30,6 +30,8 @@ var (
 			chisa.Music.Stop(chisa.Session, interaction)
 		case "disconnect":
 			chisa.Music.Disconnect(chisa.Session, interaction)
+		case "shownp":
+			chisa.Music.ShowMusicCard(chisa.Session, interaction)
 		}
 	}
 	musicCommands = []*discordgo.ApplicationCommand{
@@ -73,6 +75,11 @@ var (
 				{
 					Name:        "disconnect",
 					Description: "Disconnect from voice channel",
+					Type:        1,
+				},
+				{
+					Name:        "shownp",
+					Description: "Show prototype of new music card",
 					Type:        1,
 				},
 			},
