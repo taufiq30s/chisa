@@ -65,7 +65,6 @@ func (m *MusicBot) onTrackEnd(player disgolink.Player, event lavalink.TrackEndEv
 			responses.SetColor("0bdd47"),
 		))
 		if err != nil {
-			fmt.Printf("Error sending message: %v", err)
 			utils.ErrorLog.Printf("Error sending message: %v", err)
 		}
 		return

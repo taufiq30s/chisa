@@ -20,7 +20,6 @@ type WiseSimulateDto struct {
 func (c *Currency) SimulateWise(s *discordgo.Session, i *discordgo.InteractionCreate, data *WiseSimulateDto) {
 	err := responses.InteractionResponse(s, i.Interaction).Defer()
 	if err != nil {
-		fmt.Println("Error when defer :", err)
 		utils.ErrorLog.Println("Error when defer :", err)
 	}
 	// Validate input

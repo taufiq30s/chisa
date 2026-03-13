@@ -28,7 +28,6 @@ var (
 				},
 			})
 			if err != nil {
-				fmt.Println("Error when send options :", err)
 				utils.ErrorLog.Println("Error when send options :", err)
 			}
 		}

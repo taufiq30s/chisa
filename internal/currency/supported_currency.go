@@ -37,7 +37,6 @@ func (c *Currency) GetCurrencies(query string) []*discordgo.ApplicationCommandOp
 		var currencies []*discordgo.ApplicationCommandOptionChoice
 		err := json.Unmarshal([]byte(rdbCache), &currencies)
 		if err != nil {
-			fmt.Printf("Error when unmarshalling data: %v", err)
 			utils.ErrorLog.Printf("Error when unmarshalling data: %v", err)
 			return nil
 		}
@@ -53,7 +52,6 @@ func (c *Currency) GetCurrencies(query string) []*discordgo.ApplicationCommandOp
 	}
 	currencies, err := c.provider.GetCurrencies()
 	if err != nil {
-		fmt.Printf("Error when fetching data: %v", err)
 		utils.ErrorLog.Printf("Error when fetching data: %v", err)
 		return nil
 	}
@@ -65,7 +63,6 @@ func (c *Currency) GetCurrencies(query string) []*discordgo.ApplicationCommandOp
 
 	jsonData, err := json.Marshal(currencies)
 	if err != nil {
-		fmt.Printf("Error when marshalling data: %v", err)
 		utils.ErrorLog.Printf("Error when marshalling data: %v", err)
 		return nil
 	}
@@ -75,7 +72,6 @@ func (c *Currency) GetCurrencies(query string) []*discordgo.ApplicationCommandOp
 	defer rdbCtx.Done()
 	err = c.rdb.Set(rdbCtx, "currencies", string(jsonData), 7*24*time.Hour).Err()
 	if err != nil {
-		fmt.Printf("Error when storing data: %v", err)
 		utils.ErrorLog.Printf("Error when storing data: %v", err)
 		return nil
 	}

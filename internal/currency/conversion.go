@@ -26,7 +26,6 @@ type conversionResultDto struct {
 func (c *Currency) Conversion(s *discordgo.Session, i *discordgo.InteractionCreate, data *ConversionDto) {
 	err := responses.InteractionResponse(s, i.Interaction).Defer()
 	if err != nil {
-		fmt.Println("Error when defer :", err)
 		utils.ErrorLog.Println("Error when defer :", err)
 	}
 	// Validate input

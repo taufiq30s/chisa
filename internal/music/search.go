@@ -172,7 +172,6 @@ func (m *MusicBot) InitializeCleanSearchCache() {
 		time.Sleep(timeout)
 		for k, v := range m.searchResults {
 			if time.Since(v.timestamp) > timeout {
-				fmt.Println("Execute")
 				err := m.session.ChannelMessageDelete(v.channelId, v.messageId)
 				if err != nil {
 					fmt.Println("Failed to remove message:", err)

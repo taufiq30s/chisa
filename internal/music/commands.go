@@ -116,7 +116,6 @@ func (m *MusicBot) Skip(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			Description: "There is no track playing.",
 		}).Execute()
 		if err != nil {
-			fmt.Println("Error when create error response", err)
 			utils.ErrorLog.Println("Error when create error response", err)
 		}
 		return
