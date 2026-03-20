@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/disgoorg/disgolink/v3/disgolink"
@@ -35,11 +34,11 @@ func New(s *discordgo.Session, botId string, guildId string) *MusicBot {
 
 	return &MusicBot{
 		Client:        client,
-		queue:         make([]trackState, 0),
+		queue:         make([]trackState, InitialQueueCapacity),
 		searchResults: make(map[string]*searchResultState),
 		player:        player,
 		session:       s,
-		lastPosition:  -1,
+		lastPosition:  InitialLastPosition,
 		featureName:   "Chisa Music Player",
 	}
 }
@@ -68,7 +67,7 @@ func (m *MusicBot) ConnectToNodes() error {
 	}
 
 	for _, nodeConfiguration := range m.nodes {
-		wg.Add(1)
+		wg.Add(WaitGroupIncrement)
 		go m.connectToNode(&nodeConfiguration, &wg)
 	}
 	wg.Wait()
@@ -85,7 +84,7 @@ func (m *MusicBot) ConnectToNodes() error {
 
 func (m *MusicBot) connectToNode(config *disgolink.NodeConfig, wg *sync.WaitGroup) {
 	fmt.Printf("Connecting to lavalink node %s\n", config.Name)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), NodeConnectionTimeout)
 	defer cancel()
 	defer wg.Done()
 
@@ -152,7 +151,7 @@ func (m *MusicBot) generateMusicInformation(state *trackState, status string) {
 			},
 			{
 				Name:   "Duration",
-				Value:  fmt.Sprintf("%02d:%02d", int(info.Length)/(1000*60), int(info.Length)/1000%60),
+				Value:  fmt.Sprintf("%02d:%02d", int(info.Length)/(MillisecondsPerSecond*SecondsPerMinute), int(info.Length)/MillisecondsPerSecond%SecondsPerMinute),
 				Inline: true,
 			},
 			{
@@ -162,7 +161,7 @@ func (m *MusicBot) generateMusicInformation(state *trackState, status string) {
 			},
 			{
 				Name:   "Queue Length",
-				Value:  fmt.Sprintf("%d", len(m.queue)-1),
+				Value:  fmt.Sprintf("%d", len(m.queue)-QueueOffsetForLength),
 				Inline: true,
 			},
 		}),

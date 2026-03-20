@@ -114,7 +114,7 @@ func SendRequestVerificationToAdmin(s *discordgo.Session, newMember *discordgo.U
 // Welcome message to "welcome" channel.
 func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCreate, params ...any) {
 	var responseEmbed *discordgo.MessageEmbed
-	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
+	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+StringOffsetAfterLastIndex:]
 	verifiedRoleId = getVerifiedRoleId()
 
 	welcomeChannelId, err := utils.GetEnv("AKASHIC_WELCOME_CHANNEL_ID")
@@ -195,11 +195,11 @@ func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCrea
 	// Send welcome message to new member in "welcome" channel
 	responseEmbed = responses.CreateMessageEmbed(
 		s,
-		fmt.Sprintf("Welcome to %s", s.State.Guilds[0].Name),
+		fmt.Sprintf("Welcome to %s", s.State.Guilds[FirstGuildIndex].Name),
 		fmt.Sprintf(`Hello <@%s>, welcome to %s.
 				Please see the server rules at <#%s>.
 				If you have any questions or suggestions, please ask \"Pengasuh Anak\"`,
-			memberId, s.State.Guilds[0].Name, ruleChannelId,
+			memberId, s.State.Guilds[FirstGuildIndex].Name, ruleChannelId,
 		),
 		featureName,
 		responses.SetColor("0bdd47"),
@@ -216,7 +216,7 @@ func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCrea
 // him invitation link
 func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCreate, params ...any) {
 	var responseEmbed *discordgo.MessageEmbed
-	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
+	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+StringOffsetAfterLastIndex:]
 
 	// Check member exists
 	member, err := s.GuildMember(i.Interaction.GuildID, memberId)
@@ -224,7 +224,7 @@ func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCrea
 		utils.ErrorLog.Println(err)
 		// When new member is not found or has left the server
 		// before being approved
-		if strings.Contains(err.Error(), "404 Not Found") {
+		if strings.Contains(err.Error(), HTTPNotFoundError) {
 			responses.ErrorResponse(
 				s,
 				i,

@@ -55,7 +55,7 @@ func (c *Currency) Conversion(s *discordgo.Session, i *discordgo.InteractionCrea
 
 	// Show result to user
 	var strRate string
-	if result.Rate < 1 {
+	if result.Rate < RateDisplayThreshold {
 		strRate = fmt.Sprintf("%.5f", result.Rate)
 	} else {
 		strRate = utils.FormatDecimalNumberWithGrouping(result.Rate)
@@ -96,8 +96,8 @@ func (c *Currency) Conversion(s *discordgo.Session, i *discordgo.InteractionCrea
 }
 
 func (c *Currency) validateConversionInput(amount float64, baseCurrency string, destinationCurrency string) error {
-	if amount <= 0 {
-		return fmt.Errorf("value must be greater than 0")
+	if amount <= MinimumAmount {
+		return fmt.Errorf("value must be greater than %d", MinimumAmount)
 	}
 	if baseCurrency == destinationCurrency {
 		return fmt.Errorf("base currency and target currency must be different")
@@ -105,8 +105,8 @@ func (c *Currency) validateConversionInput(amount float64, baseCurrency string, 
 	if baseCurrency == "" || destinationCurrency == "" {
 		return fmt.Errorf("base currency and target currency must be provided")
 	}
-	if len(baseCurrency) != 3 || len(destinationCurrency) != 3 {
-		return fmt.Errorf("base currency and target currency must be 3 characters")
+	if len(baseCurrency) != CurrencyCodeLength || len(destinationCurrency) != CurrencyCodeLength {
+		return fmt.Errorf("base currency and target currency must be %d characters", CurrencyCodeLength)
 	}
 	return nil
 }
@@ -121,6 +121,6 @@ func (c *Currency) calculateCurrency(amount float64, baseCurrency string, destin
 	return &conversionResultDto{
 		Result:    amount * rateData.Rate,
 		Rate:      rateData.Rate,
-		UpdatedAt: time.Unix(rateData.UpdatedAt, 0).Format("02 January 2006 15:04:05 MST"),
+		UpdatedAt: time.Unix(rateData.UpdatedAt, MinimumAmount).Format(DateFormat),
 	}, nil
 }

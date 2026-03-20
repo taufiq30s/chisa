@@ -13,12 +13,12 @@ import (
 
 var (
 	musicCommandHandler = func(chisa *bot.Bot, interaction *discordgo.InteractionCreate) {
-		switch options := interaction.ApplicationCommandData().Options; options[0].Name {
+		switch options := interaction.ApplicationCommandData().Options; options[OptionIndexFirst].Name {
 		case "play":
 			chisa.Music.Load(
 				chisa.Session,
 				interaction,
-				parseIdentifier(options[0].Options[0].StringValue()),
+				parseIdentifier(options[OptionIndexFirst].Options[OptionIndexFirst].StringValue()),
 			)
 		case "pause":
 			chisa.Music.Pause(chisa.Session, interaction)

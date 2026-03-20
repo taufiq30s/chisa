@@ -22,7 +22,7 @@ func HandleSearchPreviousPage(s *discordgo.Session, i *discordgo.InteractionCrea
 
 func HandleSearchSelect(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
 	data := i.MessageComponentData()
-	params[0].(*MusicBot).selectSearchResult(s, i, data.Values[0])
+	params[FirstQueueIndex].(*MusicBot).selectSearchResult(s, i, data.Values[FirstQueueIndex])
 }
 
 func (m *MusicBot) onPlayerUpdate(player disgolink.Player, _ lavalink.PlayerUpdateMessage) {

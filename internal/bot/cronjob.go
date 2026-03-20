@@ -19,7 +19,7 @@ func (chisa *Bot) CreateJobs() {
 
 	// Update Scam Dataset
 	_, err = schedule.NewJob(
-		gocron.DailyJob(1, gocron.NewAtTimes(gocron.NewAtTime(0, 0, 0))),
+		gocron.DailyJob(CronDailyJobCount, gocron.NewAtTimes(gocron.NewAtTime(CronHourMidnight, CronMinuteZero, CronSecondZero))),
 		gocron.NewTask(chisa.updateScamDataset),
 	)
 	if err != nil {

@@ -29,7 +29,7 @@ func init() {
 
 func main() {
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(NumInitGoroutines)
 
 	token, err := utils.GetEnv("BOT_TOKEN")
 	if err != nil {
@@ -50,10 +50,10 @@ func main() {
 	go handlers.Register(&wg, &chisa, guildId)
 
 	wg.Wait()
-	fmt.Printf("Bot Ready with uptime: %s\n", time.Now().Format("Mon Jan 2 2006 15:04:05 GMT+0000"))
-	utils.InfoLog.Printf("Bot Ready with uptime: %s\n", time.Now().Format("Mon Jan 2 2006 15:04:05 GMT+0000"))
+	fmt.Printf("Bot Ready with uptime: %s\n", time.Now().Format(DateTimeFormat))
+	utils.InfoLog.Printf("Bot Ready with uptime: %s\n", time.Now().Format(DateTimeFormat))
 
-	sc := make(chan os.Signal, 1)
+	sc := make(chan os.Signal, SignalChannelBuffer)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 

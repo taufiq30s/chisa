@@ -6,15 +6,15 @@ import (
 
 func FormatDecimalNumberWithGrouping(num float64) string {
 	in := fmt.Sprintf("%.2f", num)
-	numOfDigits := len(in) - 3
-	if num < 0 {
+	numOfDigits := len(in) - DecimalSeparatorOffset
+	if num < LoopZeroBoundary {
 		numOfDigits-- // First character is the - sign (not a digit)
 	}
-	numOfCommas := (numOfDigits - 1) / 3
+	numOfCommas := (numOfDigits - CommaGroupCalculator) / DigitsPerCommaGroup
 
 	out := make([]byte, len(in)+numOfCommas)
-	if num < 0 {
-		in, out[0] = in[1:], '-'
+	if num < LoopZeroBoundary {
+		in, out[FirstCharIndex] = in[StringIndexOne:], '-'
 	}
 
 	isBehindDecimal := true
@@ -25,11 +25,11 @@ func FormatDecimalNumberWithGrouping(num float64) string {
 			continue
 		}
 		if !isBehindDecimal {
-			if i == 0 {
+			if i == LoopZeroBoundary {
 				return string(out)
 			}
-			if k++; k == 3 {
-				j, k = j-1, 0
+			if k++; k == DigitsPerCommaGroup {
+				j, k = j-CommaGroupCalculator, LoopZeroBoundary
 				out[j] = ','
 			}
 		}

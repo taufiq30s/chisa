@@ -41,7 +41,7 @@ func CreateMessageEmbed(
 	version, err := utils.GetEnv("VERSION")
 	if err != nil {
 		log.Fatalf("Failed to load .env : %s", err)
-		version = "0.0.1"
+		version = DefaultVersion
 	}
 
 	embed := &discordgo.MessageEmbed{
@@ -64,17 +64,17 @@ func CreateMessageEmbed(
 }
 
 func convertHexToInt(color string) int {
-	color = strings.Replace(color, "#", "", -1)
+	color = strings.Replace(color, "#", EmptyString, NoReplaceLimit)
 	color = strings.ToLower(color)
-	base := 1
-	result := 0
+	base := InitialBase
+	result := InitialValue
 	for i := len(color) - 1; i >= 0; i-- {
-		if color[i] >= '0' && color[i] <= '9' {
-			result += int(color[i]-'0') * base
-		} else if color[i] >= 'a' && color[i] <= 'f' {
-			result += int(color[i]-'a'+10) * base
+		if color[i] >= HexCharZero && color[i] <= HexCharNine {
+			result += int(color[i]-HexCharZero) * base
+		} else if color[i] >= HexCharLowerA && color[i] <= HexCharLowerF {
+			result += int(color[i]-HexCharLowerA+HexDigitOffset) * base
 		}
-		base *= 16
+		base *= HexBase
 	}
 	return result
 }

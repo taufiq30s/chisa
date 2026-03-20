@@ -25,24 +25,24 @@ func (m *MusicBot) search(s *discordgo.Session, i *discordgo.InteractionCreate, 
 		tracks []lavalink.Track
 	)
 
-	if len(result) >= 20 {
-		length = 20
-		tracks = result[:20]
+	if len(result) >= MaxSearchResults {
+		length = MaxSearchResults
+		tracks = result[:MaxSearchResults]
 	} else {
 		length = len(result)
 		tracks = result
 	}
 
-	if length > 0 {
+	if length > InitialQueueCapacity {
 		m.searchResults[i.Member.User.ID] = &searchResultState{
 			tracks:    tracks,
-			page:      1,
+			page:      InitialPage,
 			length:    length,
 			timestamp: time.Now(),
 			channelId: i.ChannelID,
 		}
 	}
-	m.searchResult(s, i, 1, tracks, false)
+	m.searchResult(s, i, InitialPage, tracks, false)
 }
 
 func (m *MusicBot) moveSearchPage(s *discordgo.Session, i *discordgo.InteractionCreate, isNext bool) {
@@ -86,21 +86,21 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 	var (
 		title string
 		body  string
-		limit int = 5
+		limit int = SearchResultsPerPage
 	)
 	if len(result) < limit {
 		limit = len(result)
 	}
 
-	if limit == 0 {
+	if limit == InitialQueueCapacity {
 		title = "No result found"
 		body = "No result found"
 	} else {
 		title = "Search result"
-		for _, track := range result[(page-1)*limit : (page)*limit] {
+		for _, track := range result[(page-QueueOffsetForLength)*limit : (page)*limit] {
 			body += fmt.Sprintf(
 				"%d. **%s - %s** `%02d:%02d`\n",
-				(page-1)*limit+1,
+				(page-QueueOffsetForLength)*limit+QueueOffsetForLength,
 				track.Info.Author,
 				track.Info.Title,
 				int(track.Info.Length)/(1000*60),
@@ -118,7 +118,7 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 			utils.ErrorLog.Println("Failed to defer interaction", err)
 			return
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(InteractionResponseDelay)
 	} else {
 		response.SetResponseTypeAsUpdate()
 	}
@@ -133,7 +133,7 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 		fmt.Sprintf("search-select-%s", i.Member.User.ID),
 		"Select a track",
 		func() (options []discordgo.SelectMenuOption) {
-			for _, track := range result[(page-1)*limit : (page)*limit] {
+			for _, track := range result[(page-QueueOffsetForLength)*limit : (page)*limit] {
 				options = append(options, discordgo.SelectMenuOption{
 					Label: track.Info.Title,
 					Value: track.Info.Identifier,
@@ -142,7 +142,7 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 			return options
 		},
 	).AddNewRow().WithButton(
-		"Previous", discordgo.PrimaryButton, fmt.Sprintf("search-previous-%s", i.Interaction.ID), page == 1,
+		"Previous", discordgo.PrimaryButton, fmt.Sprintf("search-previous-%s", i.Interaction.ID), page == InitialPage,
 	).WithButton("Next", discordgo.PrimaryButton, fmt.Sprintf("search-next-%s", i.Interaction.ID), len(result) <= page*limit)
 
 	if !isUpdate {

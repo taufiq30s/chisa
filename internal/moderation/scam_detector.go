@@ -21,7 +21,7 @@ var (
 	DATABSE_SCAM_URLS = "https://raw.githubusercontent.com/Discord-AntiScam/scam-links/main/list.json"
 	ctx               = context.Background()
 	BanScammerHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
-		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
+		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+StringOffsetAfterLastIndex:]
 		err := responses.InteractionResponse(s, i.Interaction).WithEmbed(
 			responses.CreateMessageEmbed(s,
 				"Ban Successful",
@@ -34,10 +34,10 @@ var (
 		if err != nil {
 			utils.ErrorLog.Println(err)
 		}
-		s.GuildBanCreateWithReason(i.GuildID, userId, "Compromise account/indicated scam", 0)
+		s.GuildBanCreateWithReason(i.GuildID, userId, "Compromise account/indicated scam", GuildBanDeleteMessageDays)
 	}
 	RemoveSuspectHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
-		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+1:]
+		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+StringOffsetAfterLastIndex:]
 		err := responses.InteractionResponse(s, i.Interaction).WithEmbed(
 			responses.CreateMessageEmbed(s,
 				"Remove timeout successful",
@@ -66,7 +66,7 @@ func UpdateDataset(client *redis.Client) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != HTTPStatusOK {
 		return fmt.Errorf("failed to GET dataset: %s", resp.Status)
 	}
 
@@ -108,7 +108,7 @@ func CheckScam(c *redis.Client, s *discordgo.Session, m *discordgo.MessageCreate
 	// Check message mention @everyone or @here and get urls
 	isSuspect = strings.Contains(words, "@everyone") || strings.Contains(words, "@here")
 	urlPattern := regexp.MustCompile(`(http|https):\/\/[^\s]+`)
-	links := urlPattern.FindAllString(message, -1)
+	links := urlPattern.FindAllString(message, FindAllMatches)
 	for _, link := range links {
 		// Check word is URL or not
 		uri, err := url.ParseRequestURI(link)
@@ -128,11 +128,11 @@ func CheckScam(c *redis.Client, s *discordgo.Session, m *discordgo.MessageCreate
 		}
 	}
 	if isSuspect {
-		return 1
+		return ScamCodeSuspect
 	} else if isContainScamLink {
-		return 2
+		return ScamCodePositive
 	} else {
-		return 0
+		return ScamCodeNotScam
 	}
 }
 
@@ -155,20 +155,20 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 
 	// Create Message Embed
 	switch code {
-	case 1:
-		timeoutDay = 1
+	case ScamCodeSuspect:
+		timeoutDay = TimeoutDaysSuspect
 		status = "Suspected scam"
-	case 2:
-		timeoutDay = 7
+	case ScamCodePositive:
+		timeoutDay = TimeoutDaysPositive
 		status = "Scam"
 	default:
-		timeoutDay = 0
+		timeoutDay = TimeoutDaysNone
 	}
 
-	if timeoutDay == 0 {
+	if timeoutDay == TimeoutDaysNone {
 		return
 	}
-	timeout := time.Now().AddDate(0, 0, timeoutDay)
+	timeout := time.Now().AddDate(DateOffsetYears, DateOffsetMonths, timeoutDay)
 	scamMessageEmbed = responses.CreateMessageEmbed(s,
 		title,
 		fmt.Sprintf(

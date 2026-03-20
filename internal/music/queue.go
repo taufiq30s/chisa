@@ -55,28 +55,28 @@ func (m *MusicBot) addPlaylistToQueue(p *lavalink.Playlist, i *discordgo.Interac
 }
 
 func (m *MusicBot) getFirstTrack() *trackState {
-	if len(m.queue) == 0 {
+	if len(m.queue) == InitialQueueCapacity {
 		return nil
 	}
-	return &m.queue[0]
+	return &m.queue[FirstQueueIndex]
 }
 
 func (m *MusicBot) setNextTrackAsInteractionReply(i *discordgo.InteractionCreate) {
-	if len(m.queue) == 0 {
+	if len(m.queue) == InitialQueueCapacity {
 		return
 	}
-	if len(m.queue) == 1 {
-		m.queue[0].interaction = i
+	if len(m.queue) == QueueOffsetForLength {
+		m.queue[FirstQueueIndex].interaction = i
 		return
 	}
-	m.queue[1].interaction = i
+	m.queue[SecondQueueIndex].interaction = i
 }
 
 func (m *MusicBot) removeFromQueue() {
-	if len(m.queue) == 0 {
+	if len(m.queue) == InitialQueueCapacity {
 		return
 	}
-	m.queue = m.queue[1:]
+	m.queue = m.queue[QueueOffsetForLength:]
 }
 
 func (m *MusicBot) clearQueue() {

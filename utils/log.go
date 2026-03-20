@@ -18,15 +18,15 @@ var (
 )
 
 func loadFile() {
-	infoFile, err = os.OpenFile("logs/info.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	infoFile, err = os.OpenFile("logs/info.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, FilePermissionReadWrite)
 	if err != nil {
 		log.Fatal(err)
 	}
-	warningFile, err = os.OpenFile("logs/warning.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
+	warningFile, err = os.OpenFile("logs/warning.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, FilePermissionReadWriteGroup)
 	if err != nil {
 		log.Fatal(err)
 	}
-	errorFile, err = os.OpenFile("logs/error.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
+	errorFile, err = os.OpenFile("logs/error.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, FilePermissionReadWriteGroup)
 	if err != nil {
 		log.Fatal(err)
 	}
