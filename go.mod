@@ -11,7 +11,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/redis/go-redis/v9 v9.18.0
-	golang.org/x/image v0.37.0
+	golang.org/x/image v0.38.0
 )
 
 replace github.com/disgoorg/disgolink/v3 => ./.vendor/disgolink
