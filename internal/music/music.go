@@ -40,6 +40,7 @@ type MusicBot struct {
 	nodes         []disgolink.NodeConfig
 	player        disgolink.Player
 	searchResults map[string]*searchResultState
+	searchMu      sync.RWMutex
 	session       *discordgo.Session
 	guildID       snowflake.ID
 	lastPosition  int64

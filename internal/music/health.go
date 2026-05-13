@@ -12,7 +12,11 @@ const (
 )
 
 func checkNodeHealth(nodeStats *lavalink.Stats) bool {
+	if nodeStats.Memory.Allocated == 0 {
+		return false
+	}
+	memUsagePct := (float64(nodeStats.Memory.Used) / float64(nodeStats.Memory.Allocated)) * 100
 	return nodeStats.CPU.SystemLoad < maxCPUThreshold &&
-		(float64(nodeStats.Memory.Used)/float64(nodeStats.Memory.Allocated))*100 < maxMemoryThreshold &&
+		memUsagePct < maxMemoryThreshold &&
 		nodeStats.Players > minPlayersThreshold
 }

@@ -66,9 +66,14 @@ func (bot *Bot) InitializeMusicClient(wg *sync.WaitGroup, guildId string) {
 		bot.Session.State.User.ID,
 		guildId,
 	)
-	// musicBot.ConnectToNodes()
-	// musicBot.InitializeListenerFunctions()
-	// go musicBot.InitializeCleanSearchCache()
+
+	if err := musicBot.ConnectToNodes(); err != nil {
+		utils.ErrorLog.Printf("Music client failed to connect to nodes: %v — music commands will be unavailable\n", err)
+	} else {
+		musicBot.InitializeListenerFunctions()
+		go musicBot.InitializeCleanSearchCache()
+	}
+
 	bot.Music = musicBot
 }
 

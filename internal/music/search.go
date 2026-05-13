@@ -34,6 +34,7 @@ func (m *MusicBot) search(s *discordgo.Session, i *discordgo.InteractionCreate, 
 	}
 
 	if length > InitialQueueCapacity {
+		m.searchMu.Lock()
 		m.searchResults[i.Member.User.ID] = &searchResultState{
 			tracks:    tracks,
 			page:      InitialPage,
@@ -41,11 +42,14 @@ func (m *MusicBot) search(s *discordgo.Session, i *discordgo.InteractionCreate, 
 			timestamp: time.Now(),
 			channelId: i.ChannelID,
 		}
+		m.searchMu.Unlock()
 	}
 	m.searchResult(s, i, InitialPage, tracks, false)
 }
 
 func (m *MusicBot) moveSearchPage(s *discordgo.Session, i *discordgo.InteractionCreate, isNext bool) {
+	m.searchMu.Lock()
+	defer m.searchMu.Unlock()
 	state := m.searchResults[i.Member.User.ID]
 	if state == nil {
 		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
@@ -64,8 +68,10 @@ func (m *MusicBot) moveSearchPage(s *discordgo.Session, i *discordgo.Interaction
 }
 
 func (m *MusicBot) selectSearchResult(s *discordgo.Session, i *discordgo.InteractionCreate, trackID string) {
+	m.searchMu.Lock()
 	state := m.searchResults[i.Member.User.ID]
 	if state == nil {
+		m.searchMu.Unlock()
 		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
 			Title:       "Session Expired",
 			Description: "Session expired, please run the command again",
@@ -73,10 +79,11 @@ func (m *MusicBot) selectSearchResult(s *discordgo.Session, i *discordgo.Interac
 		})
 		return
 	}
+	delete(m.searchResults, i.Member.User.ID)
+	m.searchMu.Unlock()
 
 	m.Load(s, i, trackID)
 	s.ChannelMessageDelete(i.ChannelID, i.Message.ID)
-	delete(m.searchResults, i.Member.User.ID)
 }
 
 /*
@@ -159,15 +166,20 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 		utils.ErrorLog.Println("Failed to get interaction response:", err)
 		return
 	}
-	m.searchResults[i.Member.User.ID].messageId = msg.ID
+	m.searchMu.Lock()
+	if state := m.searchResults[i.Member.User.ID]; state != nil {
+		state.messageId = msg.ID
+	}
+	m.searchMu.Unlock()
 }
 
-// Clean seach cache every 5 minutes and
-// age of the cache is more than 5 minutes
+// InitializeCleanSearchCache starts a background goroutine that periodically
+// evicts expired search sessions (TTL = 1 minute) and removes their Discord messages.
 func (m *MusicBot) InitializeCleanSearchCache() {
-	timeout, _ := time.ParseDuration("1m")
+	timeout := time.Minute
 	for {
 		time.Sleep(timeout)
+		m.searchMu.Lock()
 		for k, v := range m.searchResults {
 			if time.Since(v.timestamp) > timeout {
 				err := m.session.ChannelMessageDelete(v.channelId, v.messageId)
@@ -177,5 +189,6 @@ func (m *MusicBot) InitializeCleanSearchCache() {
 				delete(m.searchResults, k)
 			}
 		}
+		m.searchMu.Unlock()
 	}
 }
