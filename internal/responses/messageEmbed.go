@@ -2,13 +2,22 @@ package responses
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/taufiq30s/chisa/utils"
 )
+
+// version is the bot version shown in embed footers. Set via SetVersion at startup.
+var version = DefaultVersion
+
+// SetVersion configures the bot version string shown in all embed footers.
+func SetVersion(v string) {
+	version = v
+}
+
+// MaxEmbedFields is the Discord limit for fields in a single embed.
+const MaxEmbedFields = 25
 
 /*
 Create a message embed with the given title, description, feature name, and options.
@@ -38,12 +47,6 @@ func CreateMessageEmbed(
 	featureName string,
 	options ...func(*discordgo.MessageEmbed),
 ) *discordgo.MessageEmbed {
-	version, err := utils.GetEnv("VERSION")
-	if err != nil {
-		log.Fatalf("Failed to load .env : %s", err)
-		version = DefaultVersion
-	}
-
 	embed := &discordgo.MessageEmbed{
 		Title:       title,
 		Description: description,
@@ -93,6 +96,14 @@ func SetUrl(url string) func(*discordgo.MessageEmbed) {
 
 func SetFields(fields []*discordgo.MessageEmbedField) func(*discordgo.MessageEmbed) {
 	return func(embed *discordgo.MessageEmbed) {
+		if len(fields) > MaxEmbedFields {
+			extra := len(fields) - (MaxEmbedFields - 1)
+			fields = fields[:MaxEmbedFields-1]
+			fields = append(fields, &discordgo.MessageEmbedField{
+				Name:  "...",
+				Value: fmt.Sprintf("and %d more", extra),
+			})
+		}
 		embed.Fields = fields
 	}
 }

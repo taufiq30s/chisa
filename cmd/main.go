@@ -13,6 +13,7 @@ import (
 	"github.com/taufiq30s/chisa/internal/config"
 	"github.com/taufiq30s/chisa/internal/handlers"
 	"github.com/taufiq30s/chisa/internal/moderation"
+	"github.com/taufiq30s/chisa/internal/responses"
 	"github.com/taufiq30s/chisa/utils"
 )
 
@@ -29,6 +30,7 @@ func main() {
 	}
 
 	moderation.SetConfig(cfg)
+	responses.SetVersion(cfg.Version)
 
 	chisa := &bot.Bot{Config: cfg}
 	chisa.OpenRedis()

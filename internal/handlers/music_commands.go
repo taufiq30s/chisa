@@ -31,6 +31,13 @@ var (
 			chisa.Music.Disconnect(chisa.Session, interaction)
 		case "shownp":
 			chisa.Music.ShowMusicCard(chisa.Session, interaction)
+		case "queue":
+			chisa.Music.ShowQueue(chisa.Session, interaction)
+		case "repeat":
+			chisa.Music.ToggleRepeat(chisa.Session, interaction)
+		case "volume":
+			vol := int(options[OptionIndexFirst].Options[OptionIndexFirst].IntValue())
+			chisa.Music.SetVolume(chisa.Session, interaction, vol)
 		}
 	}
 	musicCommands = []*discordgo.ApplicationCommand{
@@ -80,6 +87,31 @@ var (
 					Name:        "shownp",
 					Description: "Show prototype of new music card",
 					Type:        1,
+				},
+				{
+					Name:        "queue",
+					Description: "Show current queue",
+					Type:        1,
+				},
+				{
+					Name:        "repeat",
+					Description: "Toggle repeat for current track",
+					Type:        1,
+				},
+				{
+					Name:        "volume",
+					Description: "Set playback volume (0–200)",
+					Type:        1,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionInteger,
+							Name:        "level",
+							Description: "Volume level (0–200, default 100)",
+							Required:    true,
+							MinValue:    func() *float64 { v := float64(0); return &v }(),
+							MaxValue:    200,
+						},
+					},
 				},
 			},
 		},

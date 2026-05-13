@@ -25,6 +25,10 @@ type MusicService interface {
 	Stop(s *discordgo.Session, i *discordgo.InteractionCreate)
 	Disconnect(s *discordgo.Session, i *discordgo.InteractionCreate)
 	ShowMusicCard(s *discordgo.Session, i *discordgo.InteractionCreate)
+	ShowQueue(s *discordgo.Session, i *discordgo.InteractionCreate)
+	SetVolume(s *discordgo.Session, i *discordgo.InteractionCreate, volume int)
+	ToggleRepeat(s *discordgo.Session, i *discordgo.InteractionCreate)
+	ClearQueue()
 	SearchNextPage(s *discordgo.Session, i *discordgo.InteractionCreate)
 	SearchPreviousPage(s *discordgo.Session, i *discordgo.InteractionCreate)
 	SearchSelect(s *discordgo.Session, i *discordgo.InteractionCreate, trackID string)
@@ -44,6 +48,7 @@ type MusicBot struct {
 	session       *discordgo.Session
 	guildID       snowflake.ID
 	lastPosition  int64
+	repeat        bool
 	featureName   string
 }
 

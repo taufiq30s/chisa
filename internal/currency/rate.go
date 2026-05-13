@@ -18,17 +18,20 @@ func (c *Currency) fetchConversionRate(ctx context.Context, baseCurrency string,
 	// Fetch conversion rate from cache
 	cacheKey := fmt.Sprintf("%s%s", baseCurrency, destinationCurrency)
 	rateDataStr, err := c.rdb.HGet(ctx, currencyRateCacheKey, cacheKey).Result()
-	if err != redis.Nil {
+	if err == nil {
+		// Cache hit: unmarshal and return
 		var rateData *currencyapi.CurrencyRate
-		err := json.Unmarshal([]byte(rateDataStr), &rateData)
-		if err != nil {
-			utils.ErrorLog.Printf("Failed to load cache of convertion rate: %v\n", err)
-			return nil, fmt.Errorf("failed to load cache")
+		if jsonErr := json.Unmarshal([]byte(rateDataStr), &rateData); jsonErr != nil {
+			utils.ErrorLog.Printf("Failed to load cache of convertion rate: %v\n", jsonErr)
+			// Fall through to fetch from API
+		} else {
+			return rateData, nil
 		}
-		return rateData, nil
+	} else if err != redis.Nil {
+		// Redis error (not a cache miss): log and fall through to API
+		utils.ErrorLog.Printf("Redis error fetching conversion rate cache: %v\n", err)
 	}
-
-	// Fetch conversion rate from API
+	// Cache miss or cache error: fetch from API
 	if c.provider == nil {
 		utils.ErrorLog.Println("Currency Provider is not set")
 		return nil, fmt.Errorf("currency provider is not set")

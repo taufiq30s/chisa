@@ -25,8 +25,9 @@ func OnVoiceStateUpdate(chisa *bot.Bot) interface{} {
 			channelID,
 			e.SessionID,
 		)
-		// if event.ChannelID == "" {
-		// 	b.Queues.Delete(event.GuildID)
-		// }
+		// When the bot is removed from a voice channel, clear the music queue.
+		if e.ChannelID == "" {
+			chisa.Music.ClearQueue()
+		}
 	}
 }

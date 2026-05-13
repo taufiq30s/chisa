@@ -53,6 +53,23 @@ var (
 	}
 )
 
+// scamDomainWhitelist contains trusted domains that should never be flagged as scam,
+// even if they appear in the scam dataset.
+var scamDomainWhitelist = map[string]struct{}{
+	"discord.com":      {},
+	"discord.gg":       {},
+	"discordapp.com":   {},
+	"youtube.com":      {},
+	"youtu.be":         {},
+	"twitch.tv":        {},
+	"twitter.com":      {},
+	"x.com":            {},
+	"github.com":       {},
+	"spotify.com":      {},
+	"open.spotify.com": {},
+	"soundcloud.com":   {},
+}
+
 // Update Scam Links
 // This feature using dataset from The DSP Project
 //
@@ -116,6 +133,11 @@ func CheckScam(c *redis.Client, s *discordgo.Session, m *discordgo.MessageCreate
 			continue
 		}
 		domain := uri.Hostname()
+
+		// Skip whitelisted domains
+		if _, ok := scamDomainWhitelist[domain]; ok {
+			continue
+		}
 
 		// Check domain contains in scam urls
 		isScam, err := c.SIsMember(ctx, "scam_dataset", domain).Result()

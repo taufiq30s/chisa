@@ -56,7 +56,17 @@ func (m *MusicBot) onTrackStart(player disgolink.Player, event lavalink.TrackSta
 }
 
 func (m *MusicBot) onTrackEnd(player disgolink.Player, event lavalink.TrackEndEvent) {
-	channelId := m.getFirstTrack().channelId
+	current := m.getFirstTrack()
+	if current == nil {
+		return
+	}
+	channelId := current.channelId
+
+	if m.repeat {
+		// Re-add the current track to the end of the queue before removing it from the front.
+		m.queue = append(m.queue, *current)
+	}
+
 	m.removeFromQueue()
 	utils.InfoLog.Println("Player end")
 	trackState := m.getFirstTrack()

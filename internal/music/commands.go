@@ -2,6 +2,7 @@ package music
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -218,3 +219,91 @@ func (m *MusicBot) Disconnect(s *discordgo.Session, i *discordgo.InteractionCrea
 		s, i.Interaction,
 	).WithEmbed(embed).Send()
 }
+
+func (m *MusicBot) ShowQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if len(m.queue) == 0 {
+		responses.InteractionResponse(s, i.Interaction).WithEmbed(
+			responses.CreateMessageEmbed(s, "Queue Empty", "No tracks in queue.", m.featureName, responses.SetColor("5e11d9")),
+		).Send()
+		return
+	}
+
+	const maxDisplay = 10
+	body := ""
+	for idx, t := range m.queue {
+		if idx >= maxDisplay {
+			body += fmt.Sprintf("_...and %d more_", len(m.queue)-maxDisplay)
+			break
+		}
+		title := t.lavaTrack.Info.Title
+		author := t.lavaTrack.Info.Author
+		lengthSec := int(t.lavaTrack.Info.Length.Milliseconds()) / 1000
+		body += fmt.Sprintf("%d. **%s — %s** `%02d:%02d`\n", idx+1, author, title, lengthSec/60, lengthSec%60)
+	}
+
+	repeatStatus := "Off"
+	if m.repeat {
+		repeatStatus = "On"
+	}
+	body += fmt.Sprintf("\n🔁 Repeat: **%s**", repeatStatus)
+
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(
+		responses.CreateMessageEmbed(s,
+			fmt.Sprintf("Queue (%d tracks)", len(m.queue)),
+			body,
+			m.featureName,
+			responses.SetColor("5e11d9"),
+		),
+	).Send()
+}
+
+func (m *MusicBot) SetVolume(s *discordgo.Session, i *discordgo.InteractionCreate, volume int) {
+	if volume < 0 {
+		volume = 0
+	}
+	if volume > 200 {
+		volume = 200
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	player := m.Client.Player(m.guildID)
+	if err := player.Update(ctx, lavalink.WithVolume(volume)); err != nil {
+		utils.ErrorLog.Printf("failed to set volume: %v\n", err)
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "Failed to set volume",
+			Description: err.Error(),
+		}).Execute()
+		return
+	}
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(
+		responses.CreateMessageEmbed(s,
+			fmt.Sprintf("Volume set to %d%%", volume),
+			"",
+			m.featureName,
+			responses.SetColor("0bdd47"),
+		),
+	).Send()
+}
+
+func (m *MusicBot) ToggleRepeat(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	m.repeat = !m.repeat
+	status := "disabled"
+	if m.repeat {
+		status = "enabled"
+	}
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(
+		responses.CreateMessageEmbed(s,
+			fmt.Sprintf("Repeat %s", status),
+			"",
+			m.featureName,
+			responses.SetColor("0bdd47"),
+		),
+	).Send()
+}
+
+// ClearQueue removes all tracks from the queue.
+func (m *MusicBot) ClearQueue() {
+	m.clearQueue()
+}
+
