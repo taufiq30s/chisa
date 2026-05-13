@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -31,14 +30,11 @@ func (chisa *Bot) Start(token string, guildId string) {
 			utils.ErrorLog.Fatalf("Failed to created discord session: %s\n", err)
 		}
 
-		fmt.Println("Connecting to discord...")
 		utils.InfoLog.Println("Connecting to discord...")
 		err = session.Open()
 		if err != nil {
-			fmt.Printf("Failed to open connection: %s\n", err)
 			utils.ErrorLog.Fatalf("Failed to open connection: %s\n", err)
 		}
-		fmt.Println("Bot connection open")
 		utils.InfoLog.Println("Bot connection open")
 
 		chisa.Session = session
@@ -46,7 +42,7 @@ func (chisa *Bot) Start(token string, guildId string) {
 	wg.Wait()
 
 	go func() {
-		fmt.Println("Creating Cron Job...")
+		utils.InfoLog.Println("Creating Cron Job...")
 		chisa.CreateJobs()
 	}()
 }
@@ -62,7 +58,6 @@ func (bot *Bot) Disconnect() {
 func (bot *Bot) InitializeMusicClient(wg *sync.WaitGroup, guildId string) {
 	defer wg.Done()
 	utils.InfoLog.Println("Connecting to music client...")
-	fmt.Println("Connecting to music client...")
 
 	musicBot := music.New(
 		bot.Session,
@@ -78,7 +73,6 @@ func (bot *Bot) InitializeMusicClient(wg *sync.WaitGroup, guildId string) {
 func (bot *Bot) InitializeCurrencyClient(wg *sync.WaitGroup, token string) {
 	defer wg.Done()
 	utils.InfoLog.Println("Connecting to currency client...")
-	fmt.Println("Connecting to currency client...")
 
 	bot.Currency = currency.New(token, bot.Redis)
 }

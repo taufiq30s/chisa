@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	DATABSE_SCAM_URLS = "https://raw.githubusercontent.com/Discord-AntiScam/scam-links/main/list.json"
+	DATABASE_SCAM_URLS = "https://raw.githubusercontent.com/Discord-AntiScam/scam-links/main/list.json"
 	ctx               = context.Background()
 	BanScammerHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
 		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+StringOffsetAfterLastIndex:]
@@ -60,9 +60,9 @@ var (
 //
 // https://github.com/Discord-AntiScam/scam-links
 func UpdateDataset(client *redis.Client) error {
-	resp, err := http.Get(DATABSE_SCAM_URLS)
+	resp, err := http.Get(DATABASE_SCAM_URLS)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to fetch scam dataset: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -72,12 +72,12 @@ func UpdateDataset(client *redis.Client) error {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read scam dataset response: %w", err)
 	}
 
 	var urls []string
 	if err = json.Unmarshal(body, &urls); err != nil {
-		return err
+		return fmt.Errorf("failed to parse scam dataset JSON: %w", err)
 	}
 
 	client.Del(ctx, "scam_dataset")

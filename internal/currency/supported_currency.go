@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
-	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -46,7 +45,6 @@ func (c *Currency) GetCurrencies(query string) []*discordgo.ApplicationCommandOp
 	}
 
 	if c.provider == nil {
-		fmt.Println("Currency: Provider is not set")
 		utils.ErrorLog.Println("Currency: Provider is not set")
 		return nil
 	}
@@ -108,8 +106,7 @@ func (c *Currency) filterResult(ctx context.Context, query string, data []*disco
 		dec := gob.NewDecoder(buff)
 		decErr := dec.Decode(&result)
 		if decErr != nil {
-			utils.ErrorLog.Println("Failed to dencode autofill result:", err)
-			fmt.Println("Failed to dencode autofill result:", err)
+			utils.ErrorLog.Println("Failed to decode autofill result:", decErr)
 		}
 		return result
 	}
@@ -132,12 +129,10 @@ func (c *Currency) filterResult(ctx context.Context, query string, data []*disco
 	err = enc.Encode(result)
 	if err != nil {
 		utils.ErrorLog.Println("Failed to encode autofill result:", err)
-		fmt.Println("Failed to encode autofill result:", err)
 	} else {
 		err = c.rdb.SetEx(ctx, "currency:autofill:"+query, buff.Bytes(), time.Hour).Err()
 		if err != nil {
 			utils.ErrorLog.Println("Failed to store cache:", err)
-			fmt.Println("Failed to store cache:", err)
 		}
 	}
 

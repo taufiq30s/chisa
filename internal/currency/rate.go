@@ -31,31 +31,30 @@ func (c *Currency) fetchConversionRate(ctx context.Context, baseCurrency string,
 	// Fetch conversion rate from API
 	if c.provider == nil {
 		utils.ErrorLog.Println("Currency Provider is not set")
-		fmt.Println("Currency Provider is not set")
 		return nil, fmt.Errorf("currency provider is not set")
 	}
 	rate, err := c.provider.FetchCurrencyRate(baseCurrency, destinationCurrency)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch conversion rate %s→%s: %w", baseCurrency, destinationCurrency, err)
 	}
 
 	// Save conversion rate to cache
 	rateDataMarshal, err := json.Marshal(rate)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal rate data: %w", err)
 	}
 
 	err = c.rdb.HSet(ctx, currencyRateCacheKey, cacheKey, rateDataMarshal).Err()
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		return nil, err
+		return nil, fmt.Errorf("failed to cache conversion rate: %w", err)
 	}
 	err = c.rdb.HExpire(ctx, currencyRateCacheKey, ttl_rate, cacheKey).Err()
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		return nil, err
+		return nil, fmt.Errorf("failed to set cache expiry: %w", err)
 	}
 
 	return rate, nil

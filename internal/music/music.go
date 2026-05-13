@@ -73,17 +73,15 @@ func (m *MusicBot) ConnectToNodes() error {
 	wg.Wait()
 
 	if m.Client.BestNode() == nil {
-		fmt.Println("Music client failed to connected")
-		utils.ErrorLog.Println("Music client failed to connected")
-		return fmt.Errorf("music client failed to connected")
+		utils.ErrorLog.Println("Music client failed to connect")
+		return fmt.Errorf("music client failed to connect")
 	}
-	fmt.Println("Music client connected")
 	utils.InfoLog.Println("Music client connected")
 	return nil
 }
 
 func (m *MusicBot) connectToNode(config *disgolink.NodeConfig, wg *sync.WaitGroup) {
-	fmt.Printf("Connecting to lavalink node %s\n", config.Name)
+	utils.InfoLog.Printf("Connecting to lavalink node %s\n", config.Name)
 	ctx, cancel := context.WithTimeout(context.Background(), NodeConnectionTimeout)
 	defer cancel()
 	defer wg.Done()
@@ -91,28 +89,24 @@ func (m *MusicBot) connectToNode(config *disgolink.NodeConfig, wg *sync.WaitGrou
 	node, err := m.Client.AddNode(ctx, *config)
 	if err != nil {
 		utils.ErrorLog.Printf("Failed to connect to lavalink node %s\n", config.Name)
-		fmt.Printf("Failed to connect to lavalink node %s\n", config.Name)
 		return
 	}
 
 	// Get lavalink node version and make sure the node is healthy
 	version, err := node.Version(ctx)
 	if err != nil {
-		utils.ErrorLog.Println("Failed to get lavalink node version")
-		fmt.Printf("Failed to connect to lavalink node %s\n", config.Name)
+		utils.ErrorLog.Printf("Failed to connect to lavalink node %s: %v\n", config.Name, err)
 		return
 	}
 
 	stats := node.Stats()
 	if !checkNodeHealth(&stats) {
-		fmt.Printf("Node %s is unhealthy\n", node.Config().Name)
 		utils.ErrorLog.Printf("Node %s is unhealthy\n", node.Config().Name)
 		m.Client.RemoveNode(node.Config().Name)
 		return
 	}
 
 	utils.InfoLog.Printf("Connected to lavalink node: %s version: %s\n", node.Config().Name, version)
-	fmt.Printf("Connected to lavalink node: %s version: %s\n", node.Config().Name, version)
 }
 
 /*
@@ -169,13 +163,11 @@ func (m *MusicBot) generateMusicInformation(state *trackState, status string) {
 	if state.interaction != nil {
 		err := responses.InteractionResponse(m.session, state.interaction.Interaction).WithEmbed(body).SendDefer()
 		if err != nil {
-			fmt.Println("Failed to send interaction response", err)
 			utils.ErrorLog.Println("Failed to send interaction response", err)
 		}
 	} else {
 		_, err := m.session.ChannelMessageSendEmbed(*state.channelId, body)
 		if err != nil {
-			fmt.Println("Failed to send message", err)
 			utils.ErrorLog.Println("Failed to send message", err)
 		}
 	}

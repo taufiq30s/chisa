@@ -2,7 +2,6 @@ package music
 
 import (
 	"bytes"
-	"fmt"
 	"image"
 	"image/draw"
 	"image/png"
@@ -15,6 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/fogleman/gg"
 	"github.com/nfnt/resize"
+	"github.com/taufiq30s/chisa/utils"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/webp"
@@ -53,7 +53,7 @@ var fonts = map[string]map[string]string{
 func (m *MusicBot) ShowMusicCard(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	buf, err := generateMusicCard()
 	if err != nil {
-		fmt.Println(err)
+		utils.ErrorLog.Println(err)
 	}
 
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -69,7 +69,7 @@ func (m *MusicBot) ShowMusicCard(s *discordgo.Session, i *discordgo.InteractionC
 		},
 	})
 	if err != nil {
-		fmt.Println(err)
+		utils.ErrorLog.Println(err)
 	}
 }
 
@@ -106,7 +106,7 @@ func generateMusicCard() (*bytes.Buffer, error) {
 	artist := randomArtist[rand.IntN(len(randomArtist))]
 	title := randomTitles[rand.IntN(len(randomTitles))]
 	albumUrl := randomImages[rand.IntN(len(randomImages))]
-	fmt.Println(artist, title, albumUrl)
+	utils.InfoLog.Printf("Music card: artist=%s title=%s albumUrl=%s\n", artist, title, albumUrl)
 
 	// Get fontface path
 	artistFontFacePath := fonts[getFontFaces(artist)]["artist"]
@@ -148,8 +148,7 @@ func generateMusicCard() (*bytes.Buffer, error) {
 
 	currentDurationWidth, _ := dc.MeasureString(currentDurationText)
 	totalDurationWidth, _ := dc.MeasureString(totalDurationText)
-
-	fmt.Println(currentDurationWidth, totalDurationWidth)
+	utils.DebugLog.Printf("Music card: currentDurationWidth=%f totalDurationWidth=%f\n", currentDurationWidth, totalDurationWidth)
 	dc.DrawString(currentDurationText, cardPaddingLeftSize, barY+(progressHeight))
 	dc.DrawString(totalDurationText, progressWidth-40, barY+(progressHeight))
 
@@ -194,7 +193,7 @@ func generateMusicCard() (*bytes.Buffer, error) {
 func loadFontFace(path string, size float64) font.Face {
 	fontBytes, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Println(path)
+		utils.ErrorLog.Printf("Failed to read font file %s: %v\n", path, err)
 		panic(err)
 	}
 	ft, err := opentype.Parse(fontBytes)
@@ -215,7 +214,7 @@ func loadFontFace(path string, size float64) font.Face {
 func loadAlbumImageFromURL(url string) image.Image {
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println("Failed to download image:", err)
+		utils.ErrorLog.Println("Failed to download image:", err)
 		return nil
 	}
 	defer resp.Body.Close()
@@ -225,11 +224,11 @@ func loadAlbumImageFromURL(url string) image.Image {
 		return img
 	}
 	if err.Error() != "image: unknown format" {
-		fmt.Println("Failed to decode image:", err)
+		utils.ErrorLog.Println("Failed to decode image:", err)
 	}
 	img, err = webp.Decode(resp.Body)
 	if err != nil {
-		fmt.Println("Failed to decode webp image:", err)
+		utils.ErrorLog.Println("Failed to decode webp image:", err)
 		return nil
 	}
 	return img

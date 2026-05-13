@@ -1,7 +1,6 @@
 package currency
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/bwmarrin/discordgo"
@@ -26,7 +25,6 @@ type Currency struct {
 func getToken(provider string) string {
 	token, err := utils.GetEnv(provider)
 	if err != nil {
-		fmt.Println("Failed to get token :", err)
 		utils.ErrorLog.Fatalln("Failed to get token :", err)
 	}
 	return token
@@ -46,7 +44,6 @@ func New(provider string, rdb *redis.Client) Currency {
 		currency.provider = currencyapi.NewWise(token)
 	default:
 		utils.ErrorLog.Printf("Invalid Currency Provider \"%s\"\n", provider)
-		fmt.Printf("Invalid Currency Provider \"%s\"\n", provider)
 	}
 	return currency
 }
