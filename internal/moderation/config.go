@@ -1,42 +1,5 @@
 package moderation
 
-import (
-	"github.com/taufiq30s/chisa/utils"
-)
-
-type Config struct {
-	VerificationChannelID string
-	ModerationChannelID   string
-	LogChannelID          string
-	VerifiedRoleID        string
-}
-
-func LoadConfig() (*Config, error) {
-	verificationChannelID, err := utils.GetEnv("VERIFICATION_CHANNEL_ID")
-	if err != nil {
-		return nil, err
-	}
-	moderationChannelID, err := utils.GetEnv("MODERATION_CHANNEL_ID")
-	if err != nil {
-		return nil, err
-	}
-	logChannelID, err := utils.GetEnv("LOG_CHANNEL_ID")
-	if err != nil {
-		return nil, err
-	}
-	verifiedRoleID, err := utils.GetEnv("VERIFIED_ROLE_ID")
-	if err != nil {
-		return nil, err
-	}
-
-	return &Config{
-		VerificationChannelID: verificationChannelID,
-		ModerationChannelID:   moderationChannelID,
-		LogChannelID:          logChannelID,
-		VerifiedRoleID:        verifiedRoleID,
-	}, nil
-}
-
 // Magic number constants extracted for better code maintainability
 const (
 	// HTTP Status Codes

@@ -5,6 +5,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/redis/go-redis/v9"
+	"github.com/taufiq30s/chisa/internal/config"
 	currencyapi "github.com/taufiq30s/chisa/internal/currency/api"
 	"github.com/taufiq30s/chisa/utils"
 )
@@ -22,26 +23,16 @@ type Currency struct {
 	supportedCurrencies []*discordgo.ApplicationCommandOptionChoice
 }
 
-func getToken(provider string) string {
-	token, err := utils.GetEnv(provider)
-	if err != nil {
-		utils.ErrorLog.Fatalln("Failed to get token :", err)
-	}
-	return token
-}
-
-func New(provider string, rdb *redis.Client) Currency {
+func New(provider string, cfg *config.Config, rdb *redis.Client) Currency {
 	currency := Currency{
 		client: &http.Client{},
 		rdb:    rdb,
 	}
 	switch provider {
 	case "currency_api":
-		token := getToken("CURRENCY_API_TOKEN")
-		currency.provider = currencyapi.NewCurrencyApi(token)
+		currency.provider = currencyapi.NewCurrencyApi(cfg.CurrencyAPIToken)
 	case "wise":
-		token := getToken("WISE_TOKEN")
-		currency.provider = currencyapi.NewWise(token)
+		currency.provider = currencyapi.NewWise(cfg.WiseToken)
 	default:
 		utils.ErrorLog.Printf("Invalid Currency Provider \"%s\"\n", provider)
 	}

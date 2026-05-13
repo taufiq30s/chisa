@@ -1,44 +1,33 @@
 package moderation
 
 import (
-	"log"
-
-	"github.com/taufiq30s/chisa/utils"
+	"github.com/taufiq30s/chisa/internal/config"
 )
 
 var (
 	featureName    = "Chisa Moderated System"
 	verifiedRoleId string
+	cfg            *config.Config
 )
 
+// SetConfig initialises the moderation package with the application config.
+// Must be called before any moderation functions are used.
+func SetConfig(c *config.Config) {
+	cfg = c
+}
+
 func getVerifiedRoleId() string {
-	verifiedRoleId, err := utils.GetEnv("AKASHIC_VERIFIED_ROLE_ID")
-	if err != nil {
-		utils.ErrorLog.Println(err)
-	}
-	return verifiedRoleId
+	return cfg.VerifiedRoleID
 }
 
 func getVerificationChannelId() string {
-	logChannel, err := utils.GetEnv("AKASHIC_VERIF_CHANNEL_ID")
-	if err != nil {
-		log.Println(err)
-	}
-	return logChannel
+	return cfg.VerifChannelID
 }
 
 func getModeratorChannelId() string {
-	logChannel, err := utils.GetEnv("CHISA_MOD_CHANNEL_ID")
-	if err != nil {
-		log.Println(err)
-	}
-	return logChannel
+	return cfg.ModChannelID
 }
 
 func getLogChannel() string {
-	logChannel, err := utils.GetEnv("CHISA_LOG_CHANNEL_ID")
-	if err != nil {
-		utils.ErrorLog.Println(err)
-	}
-	return logChannel
+	return cfg.LogChannelID
 }

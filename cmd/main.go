@@ -10,8 +10,9 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/taufiq30s/chisa/internal/bot"
-	"github.com/taufiq30s/chisa/internal/currency"
+	"github.com/taufiq30s/chisa/internal/config"
 	"github.com/taufiq30s/chisa/internal/handlers"
+	"github.com/taufiq30s/chisa/internal/moderation"
 	"github.com/taufiq30s/chisa/utils"
 )
 
@@ -23,7 +24,15 @@ func init() {
 	if err != nil {
 		utils.ErrorLog.Fatalf("Failed to load .env : %s\n", err)
 	}
-	chisa = bot.Bot{}
+
+	cfg, err := config.Load()
+	if err != nil {
+		utils.ErrorLog.Fatalf("Configuration error: %s\n", err)
+	}
+
+	moderation.SetConfig(cfg)
+
+	chisa = bot.Bot{Config: cfg}
 	go chisa.OpenRedis()
 }
 
@@ -31,23 +40,13 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(NumInitGoroutines)
 
-	token, err := utils.GetEnv("BOT_TOKEN")
-	if err != nil {
-		utils.ErrorLog.Fatalln(err)
-	}
-
-	guildId, err := utils.GetEnv("AKASHIC_SERVER_ID")
-	if err != nil {
-		utils.ErrorLog.Fatalln(err)
-	}
-
 	// Initialize bot and start bot
-	chisa.Start(token, guildId)
+	chisa.Start(chisa.Config.BotToken, chisa.Config.GuildID)
 
 	// Initialize Feature and Handlers
-	go chisa.InitializeMusicClient(&wg, guildId)
-	go chisa.InitializeCurrencyClient(&wg, currency.WiseProvider)
-	go handlers.Register(&wg, &chisa, guildId)
+	go chisa.InitializeMusicClient(&wg, chisa.Config.GuildID)
+	go chisa.InitializeCurrencyClient(&wg)
+	go handlers.Register(&wg, &chisa, chisa.Config.GuildID)
 
 	wg.Wait()
 	fmt.Printf("Bot Ready with uptime: %s\n", time.Now().Format(DateTimeFormat))
@@ -59,6 +58,6 @@ func main() {
 
 	// Unregister all commands
 	go chisa.CloseRedis()
-	go handlers.Unregister(&chisa, guildId)
+	go handlers.Unregister(&chisa, chisa.Config.GuildID)
 	defer chisa.Disconnect()
 }

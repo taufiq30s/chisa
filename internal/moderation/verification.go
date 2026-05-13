@@ -117,17 +117,8 @@ func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCrea
 	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+StringOffsetAfterLastIndex:]
 	verifiedRoleId = getVerifiedRoleId()
 
-	welcomeChannelId, err := utils.GetEnv("AKASHIC_WELCOME_CHANNEL_ID")
-	if err != nil {
-		utils.ErrorLog.Println(err)
-		return
-	}
-
-	ruleChannelId, err := utils.GetEnv("AKASHIC_RULE_CHANNEL_ID")
-	if err != nil {
-		utils.ErrorLog.Println(err)
-		return
-	}
+	welcomeChannelId := cfg.WelcomeChannelID
+	ruleChannelId := cfg.RulesChannelID
 
 	// Check member exists
 	member, err := s.GuildMember(i.Interaction.GuildID, memberId)
