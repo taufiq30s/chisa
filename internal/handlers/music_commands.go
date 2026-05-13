@@ -8,7 +8,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/disgoorg/disgolink/v3/lavalink"
 	"github.com/taufiq30s/chisa/internal/bot"
-	"github.com/taufiq30s/chisa/internal/music"
 )
 
 var (
@@ -84,13 +83,6 @@ var (
 				},
 			},
 		},
-	}
-	SearchButtonHandler = map[string]componentFunction{
-		"search-next":     music.HandleSearchNextPage,
-		"search-previous": music.HandleSearchPreviousPage,
-	}
-	SearchSelectHandler = map[string]componentFunction{
-		"search-select": music.HandleSearchSelect,
 	}
 )
 

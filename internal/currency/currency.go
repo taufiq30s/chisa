@@ -16,6 +16,14 @@ const (
 	WiseProvider        string = "wise"
 )
 
+// CurrencyService defines the external interface for the currency feature.
+// Handlers interact with Currency only through this interface.
+type CurrencyService interface {
+	Conversion(s *discordgo.Session, i *discordgo.InteractionCreate, data *ConversionDto)
+	SimulateWise(s *discordgo.Session, i *discordgo.InteractionCreate, data *WiseSimulateDto)
+	GetCurrencies(query string) []*discordgo.ApplicationCommandOptionChoice
+}
+
 type Currency struct {
 	client              *http.Client
 	rdb                 *redis.Client
@@ -23,8 +31,8 @@ type Currency struct {
 	supportedCurrencies []*discordgo.ApplicationCommandOptionChoice
 }
 
-func New(provider string, cfg *config.Config, rdb *redis.Client) Currency {
-	currency := Currency{
+func New(provider string, cfg *config.Config, rdb *redis.Client) *Currency {
+	currency := &Currency{
 		client: &http.Client{},
 		rdb:    rdb,
 	}

@@ -16,12 +16,10 @@ import (
 	"github.com/taufiq30s/chisa/utils"
 )
 
-var chisa bot.Bot
-
-func init() {
+func main() {
 	fmt.Println("Chisa")
-	err := godotenv.Load()
-	if err != nil {
+
+	if err := godotenv.Load(); err != nil {
 		utils.ErrorLog.Fatalf("Failed to load .env : %s\n", err)
 	}
 
@@ -32,21 +30,20 @@ func init() {
 
 	moderation.SetConfig(cfg)
 
-	chisa = bot.Bot{Config: cfg}
-	go chisa.OpenRedis()
-}
+	chisa := &bot.Bot{Config: cfg}
+	chisa.OpenRedis()
 
-func main() {
 	var wg sync.WaitGroup
 	wg.Add(NumInitGoroutines)
 
-	// Initialize bot and start bot
-	chisa.Start(chisa.Config.BotToken, chisa.Config.GuildID)
+	// Connect to Discord and start cron jobs.
+	chisa.Start(cfg.BotToken, cfg.GuildID)
 
-	// Initialize Feature and Handlers
-	go chisa.InitializeMusicClient(&wg, chisa.Config.GuildID)
+	// Initialize features and register Discord handlers.
+	registry := handlers.NewRegistry(chisa)
+	go chisa.InitializeMusicClient(&wg, cfg.GuildID)
 	go chisa.InitializeCurrencyClient(&wg)
-	go handlers.Register(&wg, &chisa, chisa.Config.GuildID)
+	go registry.Register(&wg, cfg.GuildID)
 
 	wg.Wait()
 	fmt.Printf("Bot Ready with uptime: %s\n", time.Now().Format(DateTimeFormat))
@@ -56,8 +53,9 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 
-	// Unregister all commands
+	// Graceful shutdown: deregister commands and close connections.
 	go chisa.CloseRedis()
-	go handlers.Unregister(&chisa, chisa.Config.GuildID)
+	go registry.Unregister(cfg.GuildID)
 	defer chisa.Disconnect()
 }
+

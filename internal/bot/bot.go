@@ -14,8 +14,8 @@ import (
 type Bot struct {
 	Config   *config.Config
 	Session  *discordgo.Session
-	Music    *music.MusicBot
-	Currency currency.Currency
+	Music    music.MusicService
+	Currency currency.CurrencyService
 	Redis    *redis.Client
 }
 

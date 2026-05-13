@@ -12,17 +12,26 @@ import (
 	"github.com/taufiq30s/chisa/utils"
 )
 
-func HandleSearchNextPage(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
-	params[0].(*MusicBot).moveSearchPage(s, i, true)
+func (m *MusicBot) SearchNextPage(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	m.moveSearchPage(s, i, true)
 }
 
-func HandleSearchPreviousPage(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
-	params[0].(*MusicBot).moveSearchPage(s, i, false)
+func (m *MusicBot) SearchPreviousPage(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	m.moveSearchPage(s, i, false)
 }
 
-func HandleSearchSelect(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
-	data := i.MessageComponentData()
-	params[FirstQueueIndex].(*MusicBot).selectSearchResult(s, i, data.Values[FirstQueueIndex])
+func (m *MusicBot) SearchSelect(s *discordgo.Session, i *discordgo.InteractionCreate, trackID string) {
+	m.selectSearchResult(s, i, trackID)
+}
+
+// ForwardVoiceServerUpdate forwards a Discord voice server update to the Lavalink client.
+func (m *MusicBot) ForwardVoiceServerUpdate(ctx context.Context, guildID snowflake.ID, token string, endpoint string) {
+	m.Client.OnVoiceServerUpdate(ctx, guildID, token, endpoint)
+}
+
+// ForwardVoiceStateUpdate forwards a Discord voice state update to the Lavalink client.
+func (m *MusicBot) ForwardVoiceStateUpdate(ctx context.Context, guildID snowflake.ID, channelID *snowflake.ID, sessionID string) {
+	m.Client.OnVoiceStateUpdate(ctx, guildID, channelID, sessionID)
 }
 
 func (m *MusicBot) onPlayerUpdate(player disgolink.Player, _ lavalink.PlayerUpdateMessage) {

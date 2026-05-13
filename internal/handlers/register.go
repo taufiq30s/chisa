@@ -1,94 +1,105 @@
 package handlers
 
 import (
-	"fmt"
-	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/taufiq30s/chisa/internal/bot"
 	"github.com/taufiq30s/chisa/utils"
 )
 
-func registerEvents(chisa *bot.Bot) {
-	fmt.Println("Registering Events")
+// Register creates all Discord application commands and registers all event
+// and interaction handlers. It calls wg.Done when complete.
+func (r *Registry) Register(wg *sync.WaitGroup, guildId string) {
+	defer wg.Done()
+	utils.InfoLog.Println("Registering Handler")
+	defer utils.InfoLog.Println("Registering Handlers Successfully")
+
+	r.registerCommand(guildId)
+	r.registerCommandHandlers()
+	r.registerEvents()
+}
+
+// Unregister removes all Discord application commands previously registered.
+func (r *Registry) Unregister(guildId string) {
+	utils.InfoLog.Println("Unregistering Handler")
+	defer utils.InfoLog.Println("Unregistering Handler Successfully")
+
+	r.commands = r.getCommands(guildId)
+	r.unregisterCommands(guildId, r.commands)
+}
+
+func (r *Registry) registerEvents() {
 	utils.InfoLog.Println("Registering Events")
-	for _, handler := range eventHandlers {
-		fn := handler(chisa)
-		chisa.Session.AddHandler(fn)
+	for _, handler := range r.eventHandlers {
+		fn := handler(r.bot)
+		r.bot.Session.AddHandler(fn)
 	}
 }
 
-func registerButtonHandlers(id string) (componentFunction, bool) {
-	for key := range buttonHandlers {
+func (r *Registry) lookupButtonHandler(id string) (componentFunction, bool) {
+	for key := range r.buttonHandlers {
 		if len(id) >= len(key) && id[:len(key)] == key {
-			return buttonHandlers[key], true
+			return r.buttonHandlers[key], true
 		}
 	}
 	return nil, false
 }
 
-func registerSelectHandlers(id string) (componentFunction, bool) {
-	for key := range selectHandlers {
+func (r *Registry) lookupSelectHandler(id string) (componentFunction, bool) {
+	for key := range r.selectHandlers {
 		if len(id) >= len(key) && id[:len(key)] == key {
-			return selectHandlers[key], true
+			return r.selectHandlers[key], true
 		}
 	}
 	return nil, false
 }
 
-func registerCommandHandlers(chisa *bot.Bot) {
-	fmt.Println("Registering Command Handlers")
+func (r *Registry) registerCommandHandlers() {
 	utils.InfoLog.Println("Registering Command Handlers")
-	chisa.Session.AddHandler(func(c *discordgo.Session, interaction *discordgo.InteractionCreate) {
+	r.bot.Session.AddHandler(func(c *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		switch interaction.Type {
 		case discordgo.InteractionApplicationCommand:
-			if handle, ok := commandHandlers[interaction.ApplicationCommandData().Name]; ok {
-				handle(chisa, interaction)
+			if handle, ok := r.commandHandlers[interaction.ApplicationCommandData().Name]; ok {
+				handle(r.bot, interaction)
 			}
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			if handle, ok := commandAutofillHandlers[interaction.ApplicationCommandData().Name]; ok {
-				handle(chisa, interaction)
+			if handle, ok := r.commandAutofillHandlers[interaction.ApplicationCommandData().Name]; ok {
+				handle(r.bot, interaction)
 			}
 		case discordgo.InteractionMessageComponent:
 			switch interaction.MessageComponentData().ComponentType {
 			case discordgo.ButtonComponent:
-				if handle, ok := registerButtonHandlers(interaction.MessageComponentData().CustomID); ok {
-					if strings.HasPrefix(interaction.MessageComponentData().CustomID, "search") {
-						handle(chisa.Session, interaction, chisa.Music)
-						return
-					}
-					handle(chisa.Session, interaction)
+				if handle, ok := r.lookupButtonHandler(interaction.MessageComponentData().CustomID); ok {
+					handle(r.bot.Session, interaction)
 				}
 			case discordgo.SelectMenuComponent:
-				if handle, ok := registerSelectHandlers(interaction.MessageComponentData().CustomID); ok {
-					if strings.HasPrefix(interaction.MessageComponentData().CustomID, "search") {
-						handle(chisa.Session, interaction, chisa.Music)
-						return
-					}
-					handle(chisa.Session, interaction)
+				if handle, ok := r.lookupSelectHandler(interaction.MessageComponentData().CustomID); ok {
+					handle(r.bot.Session, interaction)
 				}
 			}
 		}
 	})
 }
 
-func registerCommand(chisa *bot.Bot, guildId string) {
+func (r *Registry) registerCommand(guildId string) {
 	utils.InfoLog.Println("Registering Commands")
-	registerCommands := make([]*discordgo.ApplicationCommand, len(commands))
+	registerCommands := make([]*discordgo.ApplicationCommand, len(r.commands))
 	isFailed := false
-	for i, command := range commands {
-		bot, err := chisa.Session.ApplicationCommandCreate(chisa.Session.State.User.ID, guildId, command)
+	for i, command := range r.commands {
+		cmd, err := r.bot.Session.ApplicationCommandCreate(r.bot.Session.State.User.ID, guildId, command)
 		if err != nil {
 			utils.ErrorLog.Printf("Failed to create '%v' command: %v\n", command.Name, err)
 			isFailed = true
 			break
 		}
-		registerCommands[i] = bot
+		registerCommands[i] = cmd
 	}
 
 	if isFailed {
 		utils.InfoLog.Println("Executing Rollback")
-		unregisterCommands(chisa, guildId, registerCommands)
+		r.unregisterCommands(guildId, registerCommands)
 		return
 	}
+	r.commands = registerCommands
 }
+

@@ -15,6 +15,25 @@ import (
 	"github.com/taufiq30s/chisa/utils"
 )
 
+// MusicService defines the external interface for the music feature.
+// All handlers interact with MusicBot only through this interface.
+type MusicService interface {
+	Load(s *discordgo.Session, i *discordgo.InteractionCreate, data string)
+	Pause(s *discordgo.Session, i *discordgo.InteractionCreate)
+	Resume(s *discordgo.Session, i *discordgo.InteractionCreate)
+	Skip(s *discordgo.Session, i *discordgo.InteractionCreate)
+	Stop(s *discordgo.Session, i *discordgo.InteractionCreate)
+	Disconnect(s *discordgo.Session, i *discordgo.InteractionCreate)
+	ShowMusicCard(s *discordgo.Session, i *discordgo.InteractionCreate)
+	SearchNextPage(s *discordgo.Session, i *discordgo.InteractionCreate)
+	SearchPreviousPage(s *discordgo.Session, i *discordgo.InteractionCreate)
+	SearchSelect(s *discordgo.Session, i *discordgo.InteractionCreate, trackID string)
+	// ForwardVoiceServerUpdate forwards a Discord voice server update to the Lavalink client.
+	ForwardVoiceServerUpdate(ctx context.Context, guildID snowflake.ID, token string, endpoint string)
+	// ForwardVoiceStateUpdate forwards a Discord voice state update to the Lavalink client.
+	ForwardVoiceStateUpdate(ctx context.Context, guildID snowflake.ID, channelID *snowflake.ID, sessionID string)
+}
+
 type MusicBot struct {
 	Client        disgolink.Client
 	queue         []trackState
