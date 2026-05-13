@@ -11,7 +11,7 @@ import (
 func OnVoiceServerUpdate(chisa *bot.Bot) interface{} {
 	return func(session *discordgo.Session, event *discordgo.VoiceServerUpdate) {
 		chisa.Music.ForwardVoiceServerUpdate(
-			context.TODO(),
+			context.Background(),
 			snowflake.MustParse(event.GuildID),
 			event.Token,
 			event.Endpoint,

@@ -2,7 +2,6 @@ package music
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -23,7 +22,6 @@ func (m *MusicBot) Load(s *discordgo.Session, i *discordgo.InteractionCreate, da
 		return
 	}
 	if m == nil {
-		fmt.Println("MusicBot Client is not ready.")
 		utils.ErrorLog.Println("MusicBot Client is not ready.")
 		return
 	}
@@ -80,7 +78,6 @@ func (m *MusicBot) Load(s *discordgo.Session, i *discordgo.InteractionCreate, da
 				Description: "The provider URL is invalid.",
 			}).ExecuteDefer()
 			utils.ErrorLog.Println(err.Error())
-			fmt.Println(err)
 		}))
 
 	if playingTrack == nil {
@@ -88,22 +85,25 @@ func (m *MusicBot) Load(s *discordgo.Session, i *discordgo.InteractionCreate, da
 	}
 
 	if err := s.ChannelVoiceJoinManual(i.GuildID, voiceState.ChannelID, false, false); err != nil {
-		fmt.Println(err)
-		utils.ErrorLog.Println(err)
+		utils.ErrorLog.Printf("failed to join voice channel: %v\n", err)
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "Failed to join voice channel",
+			Description: err.Error(),
+		}).ExecuteDefer()
+		return
 	}
 	m.Play(playingTrack)
 }
 
 func (m *MusicBot) Play(track *lavalink.Track) {
 	utils.InfoLog.Println("Player Node: ", m.player.Node().Config().Name)
-	fmt.Println("Player Node: ", m.player.Node().Config().Name)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	err := m.player.Update(ctx, lavalink.WithTrack(*track))
 	if err != nil {
-		fmt.Println(err)
-		utils.ErrorLog.Println(err)
+		utils.ErrorLog.Println("failed to update player:", err)
 	}
 }
 
@@ -132,7 +132,7 @@ func (m *MusicBot) Skip(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			responses.SetColor("0bdd47"),
 		)).Send()
 	m.setNextTrackAsInteractionReply(i)
-	player.Update(context.TODO(), lavalink.WithPosition(player.Track().Info.Length))
+	player.Update(context.Background(), lavalink.WithPosition(player.Track().Info.Length))
 }
 
 func (m *MusicBot) Pause(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -145,7 +145,7 @@ func (m *MusicBot) Pause(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}).Execute()
 		return
 	}
-	player.Update(context.TODO(), lavalink.WithPaused(true))
+	player.Update(context.Background(), lavalink.WithPaused(true))
 	embed := responses.CreateMessageEmbed(
 		s, "Paused",
 		"Paused.",
@@ -167,7 +167,7 @@ func (m *MusicBot) Resume(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		}).Execute()
 		return
 	}
-	player.Update(context.TODO(), lavalink.WithPaused(false))
+	player.Update(context.Background(), lavalink.WithPaused(false))
 	embed := responses.CreateMessageEmbed(
 		s, "Resumed",
 		"Resumed.",
@@ -190,7 +190,7 @@ func (m *MusicBot) Stop(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 	m.clearQueue()
-	player.Update(context.TODO(), lavalink.WithNullTrack())
+	player.Update(context.Background(), lavalink.WithNullTrack())
 	embed := responses.CreateMessageEmbed(
 		s, "Stopped playing",
 		"Stopped playing.",
@@ -205,7 +205,7 @@ func (m *MusicBot) Stop(s *discordgo.Session, i *discordgo.InteractionCreate) {
 func (m *MusicBot) Disconnect(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	player := m.Client.Player(snowflake.MustParse(i.GuildID))
 	if player.Track() != nil {
-		player.Update(context.TODO(), lavalink.WithNullTrack())
+		player.Update(context.Background(), lavalink.WithNullTrack())
 	}
 	s.ChannelVoiceJoinManual(i.GuildID, "", false, false)
 	embed := responses.CreateMessageEmbed(

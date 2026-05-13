@@ -20,7 +20,7 @@ func OnVoiceStateUpdate(chisa *bot.Bot) interface{} {
 			channelID = &id
 		}
 		chisa.Music.ForwardVoiceStateUpdate(
-			context.TODO(),
+			context.Background(),
 			snowflake.MustParse(e.GuildID),
 			channelID,
 			e.SessionID,

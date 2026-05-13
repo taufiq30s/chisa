@@ -187,7 +187,6 @@ func SimulateWiseTransfer(amount float64, baseCurrency string, destinationCurren
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		fmt.Println(err)
 		return nil, err
 	}
 
@@ -195,7 +194,6 @@ func SimulateWiseTransfer(amount float64, baseCurrency string, destinationCurren
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyJSON))
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		fmt.Println(err)
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
@@ -204,7 +202,6 @@ func SimulateWiseTransfer(amount float64, baseCurrency string, destinationCurren
 	resp, err := client.Do(req)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		fmt.Println(err)
 		return nil, err
 	}
 	defer resp.Body.Close()

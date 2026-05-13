@@ -41,6 +41,7 @@ type MusicBot struct {
 	player        disgolink.Player
 	searchResults map[string]*searchResultState
 	session       *discordgo.Session
+	guildID       snowflake.ID
 	lastPosition  int64
 	featureName   string
 }
@@ -57,6 +58,7 @@ func New(s *discordgo.Session, botId string, guildId string) *MusicBot {
 		searchResults: make(map[string]*searchResultState),
 		player:        player,
 		session:       s,
+		guildID:       snowflake.MustParse(guildId),
 		lastPosition:  InitialLastPosition,
 		featureName:   "Chisa Music Player",
 	}

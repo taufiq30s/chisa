@@ -114,7 +114,6 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 	if !isUpdate {
 		err = response.Defer()
 		if err != nil {
-			fmt.Println("Failed to defer interaction", err)
 			utils.ErrorLog.Println("Failed to defer interaction", err)
 			return
 		}
@@ -151,14 +150,13 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 		err = response.Send()
 	}
 	if err != nil {
-		fmt.Println("Failed to send search result", err)
 		utils.ErrorLog.Println("Failed to send search result", err)
 	}
 
 	// Get Message ID after send respond
 	msg, err := s.InteractionResponse(i.Interaction)
 	if err != nil {
-		fmt.Println(err)
+		utils.ErrorLog.Println("Failed to get interaction response:", err)
 		return
 	}
 	m.searchResults[i.Member.User.ID].messageId = msg.ID
@@ -174,7 +172,6 @@ func (m *MusicBot) InitializeCleanSearchCache() {
 			if time.Since(v.timestamp) > timeout {
 				err := m.session.ChannelMessageDelete(v.channelId, v.messageId)
 				if err != nil {
-					fmt.Println("Failed to remove message:", err)
 					utils.ErrorLog.Println("Failed to remove message:", err)
 				}
 				delete(m.searchResults, k)

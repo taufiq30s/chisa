@@ -2,7 +2,6 @@ package music
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/disgoorg/disgolink/v3/disgolink"
@@ -40,14 +39,10 @@ func (m *MusicBot) onPlayerUpdate(player disgolink.Player, _ lavalink.PlayerUpda
 	if m.lastPosition == positionInSeconds && !player.Paused() {
 		track := player.Track()
 		if track != nil {
-			guildId, err := utils.GetEnv("AKASHIC_SERVER_ID")
-			if err != nil {
-				utils.ErrorLog.Fatalln(err)
-				return
-			}
-			player.Update(context.TODO(), lavalink.WithNullTrack())
-			player = m.Client.Player(snowflake.MustParse(guildId))
-			player.Update(context.TODO(), lavalink.WithTrack(*track), lavalink.WithPosition(position))
+			ctx := context.Background()
+			player.Update(ctx, lavalink.WithNullTrack())
+			player = m.Client.Player(m.guildID)
+			player.Update(ctx, lavalink.WithTrack(*track), lavalink.WithPosition(position))
 		}
 	}
 }
@@ -63,7 +58,7 @@ func (m *MusicBot) onTrackStart(player disgolink.Player, event lavalink.TrackSta
 func (m *MusicBot) onTrackEnd(player disgolink.Player, event lavalink.TrackEndEvent) {
 	channelId := m.getFirstTrack().channelId
 	m.removeFromQueue()
-	fmt.Println("Player end")
+	utils.InfoLog.Println("Player end")
 	trackState := m.getFirstTrack()
 	if trackState == nil {
 		_, err := m.session.ChannelMessageSendEmbed(*channelId, responses.CreateMessageEmbed(
@@ -78,24 +73,18 @@ func (m *MusicBot) onTrackEnd(player disgolink.Player, event lavalink.TrackEndEv
 		}
 		return
 	}
-	guildId, err := utils.GetEnv("AKASHIC_SERVER_ID")
-	if err != nil {
-		utils.ErrorLog.Fatalln(err)
-		return
-	}
-	m.player = m.Client.Player(snowflake.MustParse(guildId))
+	m.player = m.Client.Player(m.guildID)
 	m.Play(trackState.lavaTrack)
 }
 
 func (m *MusicBot) onTrackException(player disgolink.Player, event lavalink.TrackExceptionEvent) {
-	fmt.Println(event.Exception.Error())
-	utils.ErrorLog.Println(event.Exception.Error())
+	utils.ErrorLog.Println("track exception:", event.Exception.Error())
 }
 
 func (m *MusicBot) onTrackStuck(player disgolink.Player, event lavalink.TrackStuckEvent) {
-	fmt.Println("Track Stuck")
+	utils.WarningLog.Println("track stuck")
 }
 
 func (m *MusicBot) onWebSocketClosed(player disgolink.Player, event lavalink.WebSocketClosedEvent) {
-	fmt.Println("WebSocket Closed")
+	utils.WarningLog.Printf("websocket closed: code=%d reason=%s\n", event.Code, event.Reason)
 }
