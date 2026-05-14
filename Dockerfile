@@ -1,23 +1,31 @@
+# ── Stage 1: build ───────────────────────────────────────────────────────────
 FROM golang:alpine AS builder
 
 WORKDIR /app
 
-## Copy master
+# Copy dependency manifests first for better layer caching
+COPY go.mod go.sum ./
+COPY .vendor/ .vendor/
+RUN go mod download
+
+# Copy source
 COPY . .
+
 ENV GOARCH=arm64 GOOS=linux CGO_ENABLED=0
 
-## Check packages and build in arm based processor
-RUN go mod tidy
-RUN go build -v -o chisa cmd/main.go
+RUN go build -trimpath -ldflags="-s -w" -o chisa ./cmd
 
-## Use alpine image to execute binary
+# ── Stage 2: runtime ──────────────────────────────────────────────────────────
 FROM alpine:latest
+
+RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
-## Copy the compiled Go binary from the builder stage
-COPY --from=builder /app .
-RUN chmod +x chisa
+COPY --from=builder /app/chisa .
+COPY --from=builder /app/lavalink_nodes.json .
+COPY --from=builder /app/assets/ ./assets/
 
-## Run Chisa
+RUN chmod +x chisa && mkdir -p logs
+
 CMD ["./chisa"]
