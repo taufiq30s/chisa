@@ -13,13 +13,13 @@ type Config struct {
 	GuildID  string
 
 	// Redis
-	RedisURL  string
-	PoolSize  int
+	RedisURL string
+	PoolSize int
 
 	// Currency
-	CurrencyProvider  string // "wise" or "currency_api"
-	WiseToken         string
-	CurrencyAPIToken  string
+	CurrencyProvider string // "wise" or "currency_api"
+	WiseToken        string
+	CurrencyAPIToken string
 
 	// Moderation channel / role IDs
 	VerifiedRoleID   string

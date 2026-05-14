@@ -10,8 +10,6 @@ func (chisa *Bot) CreateJobs() {
 	if err != nil {
 		utils.ErrorLog.Fatalf("Failed to create scheduler: %s", err)
 	}
-	defer schedule.Start()
-	defer utils.InfoLog.Println("Cron Job created")
 
 	// Update Scam Dataset
 	_, err = schedule.NewJob(
@@ -21,4 +19,8 @@ func (chisa *Bot) CreateJobs() {
 	if err != nil {
 		utils.ErrorLog.Fatalf("Failed to create Job for Update Scam Dataset: %v\n", err)
 	}
+
+	chisa.scheduler = schedule
+	schedule.Start()
+	utils.InfoLog.Println("Cron Job created")
 }

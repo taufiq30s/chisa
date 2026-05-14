@@ -19,8 +19,8 @@ import (
 
 var (
 	DATABASE_SCAM_URLS = "https://raw.githubusercontent.com/Discord-AntiScam/scam-links/main/list.json"
-	ctx               = context.Background()
-	BanScammerHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
+	ctx                = context.Background()
+	BanScammerHandler  = func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
 		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+StringOffsetAfterLastIndex:]
 		err := responses.InteractionResponse(s, i.Interaction).WithEmbed(
 			responses.CreateMessageEmbed(s,

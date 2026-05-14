@@ -306,4 +306,3 @@ func (m *MusicBot) ToggleRepeat(s *discordgo.Session, i *discordgo.InteractionCr
 func (m *MusicBot) ClearQueue() {
 	m.clearQueue()
 }
-

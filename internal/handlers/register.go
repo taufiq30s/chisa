@@ -59,6 +59,9 @@ func (r *Registry) registerCommandHandlers() {
 	r.bot.Session.AddHandler(func(c *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		switch interaction.Type {
 		case discordgo.InteractionApplicationCommand:
+			if !checkRateLimit(r.bot.Redis, c, interaction) {
+				return
+			}
 			if handle, ok := r.commandHandlers[interaction.ApplicationCommandData().Name]; ok {
 				handle(r.bot, interaction)
 			}
@@ -102,4 +105,3 @@ func (r *Registry) registerCommand(guildId string) {
 	}
 	r.commands = registerCommands
 }
-

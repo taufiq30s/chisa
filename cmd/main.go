@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -55,9 +56,13 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 
-	// Graceful shutdown: deregister commands and close connections.
+	// Graceful shutdown with timeout.
+	_, shutdownCancel := context.WithTimeout(context.Background(), ShutdownTimeout)
+	defer shutdownCancel()
+
+	utils.InfoLog.Println("Shutting down...")
+	chisa.StopJobs()
 	go chisa.CloseRedis()
 	go registry.Unregister(cfg.GuildID)
 	defer chisa.Disconnect()
 }
-

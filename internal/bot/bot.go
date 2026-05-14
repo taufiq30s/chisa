@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/go-co-op/gocron/v2"
 	"github.com/redis/go-redis/v9"
 	"github.com/taufiq30s/chisa/internal/config"
 	"github.com/taufiq30s/chisa/internal/currency"
@@ -12,11 +13,12 @@ import (
 )
 
 type Bot struct {
-	Config   *config.Config
-	Session  *discordgo.Session
-	Music    music.MusicService
-	Currency currency.CurrencyService
-	Redis    *redis.Client
+	Config    *config.Config
+	Session   *discordgo.Session
+	Music     music.MusicService
+	Currency  currency.CurrencyService
+	Redis     *redis.Client
+	scheduler gocron.Scheduler
 }
 
 func (chisa *Bot) Start(token string, guildId string) {
@@ -55,6 +57,17 @@ func (bot *Bot) Disconnect() {
 		utils.ErrorLog.Fatalf("Failed to close connection: %s\n", err)
 	}
 	utils.InfoLog.Println("Bot connection closed")
+}
+
+// StopJobs gracefully shuts down the cron scheduler.
+func (bot *Bot) StopJobs() {
+	if bot.scheduler != nil {
+		if err := bot.scheduler.Shutdown(); err != nil {
+			utils.ErrorLog.Printf("Error stopping cron scheduler: %v\n", err)
+		} else {
+			utils.InfoLog.Println("Cron scheduler stopped")
+		}
+	}
 }
 
 func (bot *Bot) InitializeMusicClient(wg *sync.WaitGroup, guildId string) {

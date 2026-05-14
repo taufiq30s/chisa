@@ -36,13 +36,17 @@ func New(provider string, cfg *config.Config, rdb *redis.Client) *Currency {
 		client: &http.Client{},
 		rdb:    rdb,
 	}
+	var p currencyapi.CurrencyProvider
 	switch provider {
 	case "currency_api":
-		currency.provider = currencyapi.NewCurrencyApi(cfg.CurrencyAPIToken)
+		p = currencyapi.NewCurrencyApi(cfg.CurrencyAPIToken)
 	case "wise":
-		currency.provider = currencyapi.NewWise(cfg.WiseToken)
+		p = currencyapi.NewWise(cfg.WiseToken)
 	default:
 		utils.ErrorLog.Printf("Invalid Currency Provider \"%s\"\n", provider)
+	}
+	if p != nil {
+		currency.provider = currencyapi.NewCircuitBreakerProvider(p)
 	}
 	return currency
 }
