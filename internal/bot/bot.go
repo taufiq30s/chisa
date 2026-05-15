@@ -9,6 +9,7 @@ import (
 	"github.com/taufiq30s/chisa/internal/config"
 	"github.com/taufiq30s/chisa/internal/currency"
 	"github.com/taufiq30s/chisa/internal/music"
+	"github.com/taufiq30s/chisa/internal/quiz"
 	"github.com/taufiq30s/chisa/utils"
 )
 
@@ -17,6 +18,7 @@ type Bot struct {
 	Session   *discordgo.Session
 	Music     music.MusicService
 	Currency  currency.CurrencyService
+	Quiz      quiz.QuizService
 	Redis     *redis.Client
 	scheduler gocron.Scheduler
 }
@@ -94,4 +96,14 @@ func (bot *Bot) InitializeCurrencyClient(wg *sync.WaitGroup) {
 	defer wg.Done()
 	utils.InfoLog.Println("Connecting to currency client...")
 	bot.Currency = currency.New(bot.Config.CurrencyProvider, bot.Config, bot.Redis)
+}
+
+func (bot *Bot) InitializeQuizService(wg *sync.WaitGroup) {
+	defer wg.Done()
+	utils.InfoLog.Println("Initializing quiz service...")
+	manager := quiz.New(bot.Config.QuizWSPort)
+	quiz.SetDiscordSession(bot.Session)
+	quiz.StartServer(manager, bot.Config.QuizWSPort)
+	bot.Quiz = manager
+	utils.InfoLog.Printf("Quiz service ready (WS port %s)\n", bot.Config.QuizWSPort)
 }

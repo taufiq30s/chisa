@@ -46,6 +46,7 @@ func main() {
 	registry := handlers.NewRegistry(chisa)
 	go chisa.InitializeMusicClient(&wg, cfg.GuildID)
 	go chisa.InitializeCurrencyClient(&wg)
+	go chisa.InitializeQuizService(&wg)
 	go registry.Register(&wg, cfg.GuildID)
 
 	wg.Wait()

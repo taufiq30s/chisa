@@ -6,6 +6,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/taufiq30s/chisa/internal/bot"
 	"github.com/taufiq30s/chisa/internal/events"
+	"github.com/taufiq30s/chisa/internal/quiz"
 )
 
 type componentFunction func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{})
@@ -30,12 +31,14 @@ func NewRegistry(b *bot.Bot) *Registry {
 		musicCommands,
 		VerificationCommands,
 		currencyCommands,
+		quizCommands,
 	)
 
 	r.commandHandlers = map[string]func(*bot.Bot, *discordgo.InteractionCreate){
-		"music":    musicCommandHandler,
-		"verify":   VerificationCommandHandlers,
-		"currency": currencyCommandHandler,
+		"music":             musicCommandHandler,
+		"verify":            VerificationCommandHandlers,
+		"currency":          currencyCommandHandler,
+		"interactive-quiz":  quizCommandHandler,
 	}
 
 	r.commandAutofillHandlers = map[string]func(*bot.Bot, *discordgo.InteractionCreate){
@@ -68,6 +71,7 @@ func NewRegistry(b *bot.Bot) *Registry {
 		events.MessageCreate,
 		events.OnVoiceServerUpdate,
 		events.OnVoiceStateUpdate,
+		func(b *bot.Bot) interface{} { return quiz.OnVoiceStateUpdate(b.Quiz) },
 	}
 
 	return r

@@ -22,7 +22,7 @@ type circuitBreakerProvider struct {
 func NewCircuitBreakerProvider(provider CurrencyProvider) CurrencyProvider {
 	settings := gobreaker.Settings{
 		Name:        fmt.Sprintf("currency-provider-%s", provider.GetProviderName()),
-		MaxRequests: 1,               // allow 1 probe request in half-open state
+		MaxRequests: 1,                // allow 1 probe request in half-open state
 		Interval:    60 * time.Second, // reset counts every 60 s in closed state
 		Timeout:     30 * time.Second, // stay open for 30 s before trying again
 		ReadyToTrip: func(counts gobreaker.Counts) bool {

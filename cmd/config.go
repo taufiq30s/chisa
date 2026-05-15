@@ -4,7 +4,7 @@ import "time"
 
 const (
 	// Goroutine synchronization
-	NumInitGoroutines = 3 // Number of goroutines to wait for during initialization (music client, currency client, handlers)
+	NumInitGoroutines = 4 // Number of goroutines to wait for during initialization (music client, currency client, quiz service, handlers)
 
 	// Signal handling
 	SignalChannelBuffer = 1 // Buffer size for OS signal channel to prevent blocking

@@ -48,6 +48,7 @@ func Load() (*Config, error) {
 		WiseToken:        getOptional("WISE_TOKEN", ""),
 		CurrencyAPIToken: getOptional("CURRENCY_API_TOKEN", ""),
 		Version:          getOptional("VERSION", DefaultVersion),
+		QuizWSPort:       getOptional("QUIZ_WS_PORT", DefaultQuizWSPort),
 		PoolSize:         DefaultRedisPoolSize,
 
 		// Timing constants (not from env — set from package defaults)
