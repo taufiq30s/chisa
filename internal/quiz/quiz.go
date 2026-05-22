@@ -58,7 +58,7 @@ func (q *QuizManager) IsActive() bool {
 	return q.session.Active
 }
 
-func (q *QuizManager) GetHub() *Hub       { return q.hub }
+func (q *QuizManager) GetHub() *Hub         { return q.hub }
 func (q *QuizManager) GetSession() *Session { return q.session }
 func (q *QuizManager) GetSessionID() string { return q.sessionID }
 
@@ -108,8 +108,8 @@ func (q *QuizManager) HandleVoiceStateUpdate(s *discordgo.Session, e *discordgo.
 		return
 	}
 
-	// User raised hand (RequestToSpeakTimestamp set) and has not been promoted yet
-	if e.RequestToSpeakTimestamp != nil && !q.session.IsPromoted(e.UserID) {
+	// User raised hand (RequestToSpeakTimestamp set)
+	if e.RequestToSpeakTimestamp != nil {
 		member, err := s.GuildMember(e.GuildID, e.UserID)
 		username := e.UserID
 		avatar := ""

@@ -181,9 +181,9 @@ func rehydrateQueue(chisa *bot.Bot, channelID, guildID string) {
 		if vs.UserID == chisa.Session.State.User.ID {
 			continue
 		}
-		if chisa.Quiz.GetSession().IsPromoted(vs.UserID) {
-			continue
-		}
+		// if chisa.Quiz.GetSession().IsPromoted(vs.UserID) {
+		// 	continue
+		// }
 		member, err := chisa.Session.GuildMember(guildID, vs.UserID)
 		username := vs.UserID
 		avatar := ""

@@ -30,8 +30,8 @@ type Config struct {
 	RulesChannelID   string
 
 	// App
-	Version     string
-	QuizWSPort  string
+	Version    string
+	QuizWSPort string
 
 	// Derived / computed at load time (not from env directly)
 	NodeConnectionTimeout      time.Duration

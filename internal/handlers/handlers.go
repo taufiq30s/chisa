@@ -35,10 +35,10 @@ func NewRegistry(b *bot.Bot) *Registry {
 	)
 
 	r.commandHandlers = map[string]func(*bot.Bot, *discordgo.InteractionCreate){
-		"music":             musicCommandHandler,
-		"verify":            VerificationCommandHandlers,
-		"currency":          currencyCommandHandler,
-		"interactive-quiz":  quizCommandHandler,
+		"music":            musicCommandHandler,
+		"verify":           VerificationCommandHandlers,
+		"currency":         currencyCommandHandler,
+		"interactive-quiz": quizCommandHandler,
 	}
 
 	r.commandAutofillHandlers = map[string]func(*bot.Bot, *discordgo.InteractionCreate){

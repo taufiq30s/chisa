@@ -30,6 +30,7 @@ func StartServer(quiz QuizService, port string) {
 	mux.HandleFunc("/api/promote", makePromoteHandler(quiz))
 	mux.HandleFunc("/api/suppress", makeSuppressHandler(quiz))
 	mux.HandleFunc("/api/queue", makeQueueHandler(quiz))
+	mux.HandleFunc("/api/reject", makeRejectHandler(quiz))
 
 	utils.InfoLog.Printf("Quiz WS/HTTP server listening on %s\n", addr)
 	server := &http.Server{Handler: mux}

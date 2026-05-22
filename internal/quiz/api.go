@@ -93,15 +93,10 @@ func makePromoteHandler(quiz QuizService) http.HandlerFunc {
 		guildID := sess.GuildID
 		sess.mu.Unlock()
 
-		// Promote user in Discord Stage (suppress: false)
+		// Unsuppress (make speaker) via Discord voice state endpoint
 		if discordSession != nil {
-			err := discordSession.GuildMemberMove(guildID, req.UserID, &channelID)
-			if err != nil {
-				utils.WarningLog.Printf("Quiz promote: GuildMemberMove err: %v\n", err)
-			}
-			// Unsuppress (make speaker)
-			_, err = discordSession.Request("PATCH",
-				fmt.Sprintf("/guilds/%s/voice-states/%s", guildID, req.UserID),
+			_, err := discordSession.Request("PATCH",
+				discordgo.EndpointGuilds+guildID+"/voice-states/"+req.UserID,
 				map[string]interface{}{"suppress": false, "channel_id": channelID},
 			)
 			if err != nil {
@@ -109,7 +104,7 @@ func makePromoteHandler(quiz QuizService) http.HandlerFunc {
 			}
 		}
 
-		quiz.GetSession().MarkPromoted(req.UserID)
+		// quiz.GetSession().MarkPromoted(req.UserID)
 		quiz.GetHub().BroadcastQueueUpdate(quiz.GetSessionID(), quiz.GetSession().Snapshot())
 
 		jsonOK(w, promoteResponse{OK: true, PromotedUserID: req.UserID})
@@ -139,10 +134,10 @@ func makeSuppressHandler(quiz QuizService) http.HandlerFunc {
 		guildID := sess.GuildID
 		sess.mu.Unlock()
 
-		// Move user back to audience (suppress: true)
+		// Suppress (move back to audience)
 		if discordSession != nil {
 			_, err := discordSession.Request("PATCH",
-				fmt.Sprintf("/guilds/%s/voice-states/%s", guildID, req.UserID),
+				discordgo.EndpointGuilds+guildID+"/voice-states/"+req.UserID,
 				map[string]interface{}{"suppress": true, "channel_id": channelID},
 			)
 			if err != nil {
@@ -171,5 +166,60 @@ func makeQueueHandler(quiz QuizService) http.HandlerFunc {
 			ChannelID: channelID,
 			Queue:     quiz.GetSession().Snapshot(),
 		})
+	})
+}
+
+func makeRejectHandler(quiz QuizService) http.HandlerFunc {
+	return authMiddleware(quiz, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req suppressRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			jsonError(w, "invalid JSON body", http.StatusBadRequest)
+			return
+		}
+
+		sess := quiz.GetSession()
+		sess.mu.Lock()
+		channelID := sess.ChannelID
+		guildID := sess.GuildID
+		sess.mu.Unlock()
+
+		if req.UserID == "" {
+			// No user_id: reject all — suppress every queued user then clear queue.
+			snapshot := quiz.GetSession().Snapshot()
+			if discordSession != nil {
+				for _, entry := range snapshot {
+					_, err := discordSession.Request("PATCH",
+						discordgo.EndpointGuilds+guildID+"/voice-states/"+entry.UserID,
+						map[string]interface{}{"suppress": true, "channel_id": channelID},
+					)
+					if err != nil {
+						utils.WarningLog.Printf("Quiz reject-all: suppress %s err: %v\n", entry.UserID, err)
+					}
+				}
+			}
+			for _, entry := range snapshot {
+				quiz.GetSession().RemoveFromQueue(entry.UserID)
+			}
+		} else {
+			// Single user reject.
+			quiz.GetSession().RemoveFromQueue(req.UserID)
+			if discordSession != nil {
+				_, err := discordSession.Request("PATCH",
+					discordgo.EndpointGuilds+guildID+"/voice-states/"+req.UserID,
+					map[string]interface{}{"suppress": true, "channel_id": channelID},
+				)
+				if err != nil {
+					utils.WarningLog.Printf("Quiz reject: suppress %s err: %v\n", req.UserID, err)
+				}
+			}
+		}
+
+		quiz.GetHub().BroadcastQueueUpdate(quiz.GetSessionID(), quiz.GetSession().Snapshot())
+		jsonOK(w, suppressResponse{OK: true})
 	})
 }
