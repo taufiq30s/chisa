@@ -50,5 +50,5 @@ jobs:
           docker pull taufiq30s/chisa:latest
           docker stop chisa-dc || true
           docker rm chisa-dc || true
-          docker run -d --restart always ${{ secrets.VPS_DOCKER_OPTS }} --name chisa-dc taufiq30s/chisa:latest
+          docker run -d --restart always ${{ secrets.VPS_DOCKER_OPTS }} --name chisa-dc -p ${{ secrets.CHISA_WS_EVENT }}:${{ secrets.CHISA_WS_EVENT }} taufiq30s/chisa:latest
 
