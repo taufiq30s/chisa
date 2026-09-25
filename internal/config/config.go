@@ -22,12 +22,13 @@ type Config struct {
 	CurrencyAPIToken string
 
 	// Moderation channel / role IDs
-	VerifiedRoleID   string
-	VerifChannelID   string
-	ModChannelID     string
-	LogChannelID     string
-	WelcomeChannelID string
-	RulesChannelID   string
+	VerifiedRoleID    string
+	VerifChannelID    string
+	ModChannelID      string
+	LogChannelID      string
+	WelcomeChannelID  string
+	RulesChannelID    string
+	HoneypotChannelID string
 
 	// App
 	Version    string

@@ -267,3 +267,20 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 		return
 	}
 }
+
+// Block the user after send message to honeypot channel
+//
+// If someone sends a message to the honeypot channel, they should be blocked immediately.
+func BlockUserForHoneypot(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// Get honeypot channel ID and check if the message was sent in the honeypot channel
+	honeypotChannelID := getHoneypotChannelID() // Replace with actual honeypot channel ID
+	if m.ChannelID != honeypotChannelID {
+		return
+	}
+	// Ban the user who sent the message to the honeypot channel
+	err := s.GuildBanCreateWithReason(
+		m.GuildID, m.Author.ID, "User sent a message to the honeypot channel. Maybe this account is compromised.", 1)
+	if err != nil {
+		utils.ErrorLog.Println(err)
+	}
+}

@@ -12,6 +12,9 @@ func MessageCreate(chisa *bot.Bot) interface{} {
 			return
 		}
 
+		// Check if the message was sent in the honeypot channel
+		moderation.BlockUserForHoneypot(s, m)
+
 		if len(m.Content) < 10 {
 			return
 		}

@@ -31,3 +31,7 @@ func getModeratorChannelId() string {
 func getLogChannel() string {
 	return cfg.LogChannelID
 }
+
+func getHoneypotChannelID() string {
+	return cfg.HoneypotChannelID
+}

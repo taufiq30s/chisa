@@ -36,12 +36,13 @@ func Load() (*Config, error) {
 		RedisURL: get("REDIS_URL"),
 
 		// Moderation IDs (required)
-		VerifiedRoleID:   get("AKASHIC_VERIFIED_ROLE_ID"),
-		VerifChannelID:   get("AKASHIC_VERIF_CHANNEL_ID"),
-		ModChannelID:     get("CHISA_MOD_CHANNEL_ID"),
-		LogChannelID:     get("CHISA_LOG_CHANNEL_ID"),
-		WelcomeChannelID: get("AKASHIC_WELCOME_CHANNEL_ID"),
-		RulesChannelID:   get("AKASHIC_RULE_CHANNEL_ID"),
+		VerifiedRoleID:    get("AKASHIC_VERIFIED_ROLE_ID"),
+		VerifChannelID:    get("AKASHIC_VERIF_CHANNEL_ID"),
+		ModChannelID:      get("CHISA_MOD_CHANNEL_ID"),
+		LogChannelID:      get("CHISA_LOG_CHANNEL_ID"),
+		WelcomeChannelID:  get("AKASHIC_WELCOME_CHANNEL_ID"),
+		RulesChannelID:    get("AKASHIC_RULE_CHANNEL_ID"),
+		HoneypotChannelID: get("AKASHIC_HONEYPOT_CHANNEL_ID"),
 
 		// Optional with defaults
 		CurrencyProvider: getOptional("CURRENCY_PROVIDER", DefaultCurrencyProvider),
