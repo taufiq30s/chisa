@@ -28,14 +28,14 @@ func NewRegistry(b *bot.Bot) *Registry {
 	r := &Registry{bot: b}
 
 	r.commands = slices.Concat(r.commands,
-		musicCommands,
+		// musicCommands,
 		VerificationCommands,
 		currencyCommands,
 		quizCommands,
 	)
 
 	r.commandHandlers = map[string]func(*bot.Bot, *discordgo.InteractionCreate){
-		"music":            musicCommandHandler,
+		// "music":            musicCommandHandler,
 		"verify":           VerificationCommandHandlers,
 		"currency":         currencyCommandHandler,
 		"interactive-quiz": quizCommandHandler,
@@ -45,27 +45,27 @@ func NewRegistry(b *bot.Bot) *Registry {
 		"currency": currencyCommandOptions,
 	}
 
-	r.buttonHandlers = mergeMap(
-		ScamButtonResponseHandler,
-		VerificationButtonResponseHandler,
-		map[string]componentFunction{
-			"search-next": func(s *discordgo.Session, i *discordgo.InteractionCreate, _ ...interface{}) {
-				b.Music.SearchNextPage(s, i)
-			},
-			"search-previous": func(s *discordgo.Session, i *discordgo.InteractionCreate, _ ...interface{}) {
-				b.Music.SearchPreviousPage(s, i)
-			},
-		},
-	)
+	// r.buttonHandlers = mergeMap(
+	// 	ScamButtonResponseHandler,
+	// 	VerificationButtonResponseHandler,
+	// 	map[string]componentFunction{
+	// 		"search-next": func(s *discordgo.Session, i *discordgo.InteractionCreate, _ ...interface{}) {
+	// 			b.Music.SearchNextPage(s, i)
+	// 		},
+	// 		"search-previous": func(s *discordgo.Session, i *discordgo.InteractionCreate, _ ...interface{}) {
+	// 			b.Music.SearchPreviousPage(s, i)
+	// 		},
+	// 	},
+	// )
 
-	r.selectHandlers = mergeMap(
-		map[string]componentFunction{
-			"search-select": func(s *discordgo.Session, i *discordgo.InteractionCreate, _ ...interface{}) {
-				data := i.MessageComponentData()
-				b.Music.SearchSelect(s, i, data.Values[0])
-			},
-		},
-	)
+	// r.selectHandlers = mergeMap(
+	// 	map[string]componentFunction{
+	// 		"search-select": func(s *discordgo.Session, i *discordgo.InteractionCreate, _ ...interface{}) {
+	// 			data := i.MessageComponentData()
+	// 			b.Music.SearchSelect(s, i, data.Values[0])
+	// 		},
+	// 	},
+	// )
 
 	r.eventHandlers = []func(*bot.Bot) interface{}{
 		events.MessageCreate,
@@ -78,12 +78,12 @@ func NewRegistry(b *bot.Bot) *Registry {
 }
 
 // mergeMap merges multiple componentFunction maps into one.
-func mergeMap(maps ...map[string]componentFunction) map[string]componentFunction {
-	merged := make(map[string]componentFunction)
-	for _, m := range maps {
-		for key, value := range m {
-			merged[key] = value
-		}
-	}
-	return merged
-}
+// func mergeMap(maps ...map[string]componentFunction) map[string]componentFunction {
+// 	merged := make(map[string]componentFunction)
+// 	for _, m := range maps {
+// 		for key, value := range m {
+// 			merged[key] = value
+// 		}
+// 	}
+// 	return merged
+// }
