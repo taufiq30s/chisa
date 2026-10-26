@@ -31,6 +31,7 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		// Required
+		Version:  get("VERSION"),
 		BotToken: get("BOT_TOKEN"),
 		GuildID:  get("AKASHIC_SERVER_ID"),
 		RedisURL: get("REDIS_URL"),
@@ -47,14 +48,8 @@ func Load() (*Config, error) {
 		CurrencyProvider: getOptional("CURRENCY_PROVIDER", DefaultCurrencyProvider),
 		WiseToken:        getOptional("WISE_TOKEN", ""),
 		CurrencyAPIToken: getOptional("CURRENCY_API_TOKEN", ""),
-		Version:          getOptional("VERSION", DefaultVersion),
 		QuizWSPort:       getOptional("QUIZ_WS_PORT", DefaultQuizWSPort),
 		PoolSize:         DefaultRedisPoolSize,
-
-		// Timing constants (not from env — set from package defaults)
-		NodeConnectionTimeout:      DefaultNodeConnectionTimeout,
-		SearchCacheExpiryDuration:  DefaultSearchCacheExpiryDuration,
-		SearchCacheCleanupInterval: DefaultSearchCacheCleanupInterval,
 	}
 
 	if err := validate(cfg, missing); err != nil {
