@@ -1,33 +1,27 @@
 package events
 
 import (
-	"context"
-
 	"github.com/bwmarrin/discordgo"
-	"github.com/disgoorg/snowflake/v2"
 	"github.com/taufiq30s/chisa/internal/bot"
 )
 
+// OnVoiceStateUpdate watches the bot's own voice state so the music player can
+// clean up when the bot is moved or kicked out of a channel.
+//
+// Discord does not tell us "you were disconnected"; it sends a voice state
+// update with an empty ChannelID. Leaving playback running in that state would
+// keep the player goroutine writing into a dead voice connection, so tear
+// everything down instead.
 func OnVoiceStateUpdate(chisa *bot.Bot) interface{} {
 	return func(s *discordgo.Session, e *discordgo.VoiceStateUpdate) {
-		if e.UserID != s.State.User.ID {
+		// Every user in the guild produces these events, so ignore everyone
+		// but the bot itself.
+		if s.State.User == nil || e.UserID != s.State.User.ID {
 			return
 		}
-
-		var channelID *snowflake.ID
-		if e.ChannelID != "" {
-			id := snowflake.MustParse(e.ChannelID)
-			channelID = &id
-		}
-		chisa.Music.ForwardVoiceStateUpdate(
-			context.Background(),
-			snowflake.MustParse(e.GuildID),
-			channelID,
-			e.SessionID,
-		)
-		// When the bot is removed from a voice channel, clear the music queue.
-		if e.ChannelID == "" {
-			chisa.Music.ClearQueue()
+		// chisa.Music is nil when music.New failed during startup.
+		if e.ChannelID == "" && chisa.Music != nil {
+			chisa.Music.HandleVoiceLeave()
 		}
 	}
 }

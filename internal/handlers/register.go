@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -36,19 +37,18 @@ func (r *Registry) registerEvents() {
 	}
 }
 
-func (r *Registry) lookupButtonHandler(id string) (componentFunction, bool) {
-	for key := range r.buttonHandlers {
-		if len(id) >= len(key) && id[:len(key)] == key {
-			return r.buttonHandlers[key], true
-		}
+// lookupComponentHandler finds the handler whose registered key is a prefix of
+// the incoming CustomID. Prefixes exist because music components append the
+// interaction ID ("search-next-1234...") so two users' panels never collide.
+func lookupComponentHandler(handlers map[string]componentFunction, id string) (componentFunction, bool) {
+	// Exact match first: it is O(1) and keeps future non-prefixed IDs immune to
+	// a shorter prefix stealing them.
+	if h, ok := handlers[id]; ok {
+		return h, true
 	}
-	return nil, false
-}
-
-func (r *Registry) lookupSelectHandler(id string) (componentFunction, bool) {
-	for key := range r.selectHandlers {
-		if len(id) >= len(key) && id[:len(key)] == key {
-			return r.selectHandlers[key], true
+	for key, h := range handlers {
+		if strings.HasPrefix(id, key) {
+			return h, true
 		}
 	}
 	return nil, false
@@ -72,11 +72,11 @@ func (r *Registry) registerCommandHandlers() {
 		case discordgo.InteractionMessageComponent:
 			switch interaction.MessageComponentData().ComponentType {
 			case discordgo.ButtonComponent:
-				if handle, ok := r.lookupButtonHandler(interaction.MessageComponentData().CustomID); ok {
+				if handle, ok := lookupComponentHandler(r.buttonHandlers, interaction.MessageComponentData().CustomID); ok {
 					handle(r.bot.Session, interaction)
 				}
 			case discordgo.SelectMenuComponent:
-				if handle, ok := r.lookupSelectHandler(interaction.MessageComponentData().CustomID); ok {
+				if handle, ok := lookupComponentHandler(r.selectHandlers, interaction.MessageComponentData().CustomID); ok {
 					handle(r.bot.Session, interaction)
 				}
 			}
