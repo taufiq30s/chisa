@@ -1,5 +1,5 @@
-bin/
 build/
 .env
 *.backup
 logs/
+.vendor/
