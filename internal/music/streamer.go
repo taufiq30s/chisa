@@ -179,7 +179,7 @@ func (s *Streamer) Play(ctx context.Context, track model.Track) error {
 		return fmt.Errorf("voice connection speaking: %w", err)
 	}
 
-	defer s.voiceConnection.Speaking(false)
+	defer func() { _ = s.voiceConnection.Speaking(false) }()
 
 	decoder := ogg.NewPacketDecoder(ogg.NewDecoder(ffmpegStdout))
 	headerSkipped := 0

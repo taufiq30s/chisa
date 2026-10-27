@@ -202,7 +202,7 @@ func (m *MusicBot) searchResult(s *discordgo.Session, i *discordgo.InteractionCr
 		},
 	).AddNewRow().WithButton(
 		"Previous", discordgo.PrimaryButton, fmt.Sprintf("search-previous-%s", i.Interaction.ID), page == InitialPage,
-	).WithButton("Next", discordgo.PrimaryButton, fmt.Sprintf("search-next-%s", i.Interaction.ID), len(result) <= page*pageSize)
+	).WithButton("Next", discordgo.PrimaryButton, fmt.Sprintf("search-next-%s", i.ID), len(result) <= page*pageSize)
 
 	if !isUpdate {
 		err = response.SendDefer()

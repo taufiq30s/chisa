@@ -65,7 +65,7 @@ func jsonError(w http.ResponseWriter, msg string, code int) {
 
 func jsonOK(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 // ---- handler factories -------------------------------------------------------

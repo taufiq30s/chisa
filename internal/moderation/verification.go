@@ -49,7 +49,7 @@ func SendRequestVerificationHandle(s *discordgo.Session, i *discordgo.Interactio
 	err := SendRequestVerificationToAdmin(s, i.Member.User, modChannel)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
+		_, _ = s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
 			"Error",
 			fmt.Sprintf(
 				"Failed to send message with error \n``%s``",
@@ -121,7 +121,7 @@ func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCrea
 	ruleChannelId := cfg.RulesChannelID
 
 	// Check member exists
-	member, err := s.GuildMember(i.Interaction.GuildID, memberId)
+	member, err := s.GuildMember(i.GuildID, memberId)
 	if err != nil {
 		utils.ErrorLog.Println(err)
 		// When new member is not found or has left the server
@@ -154,7 +154,7 @@ func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 
 	// Assign "verify" role to new member and send status response to moderator
-	err = s.GuildMemberRoleAdd(i.Interaction.GuildID, memberId, verifiedRoleId)
+	err = s.GuildMemberRoleAdd(i.GuildID, memberId, verifiedRoleId)
 	if err != nil {
 		utils.ErrorLog.Println(err)
 		responses.ErrorResponse(
@@ -196,7 +196,7 @@ func HandleVerificationAccept(s *discordgo.Session, i *discordgo.InteractionCrea
 		responses.SetColor("0bdd47"),
 	)
 
-	s.ChannelMessageSendEmbed(
+	_, _ = s.ChannelMessageSendEmbed(
 		welcomeChannelId,
 		responseEmbed,
 	)
@@ -210,7 +210,7 @@ func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCrea
 	memberId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+StringOffsetAfterLastIndex:]
 
 	// Check member exists
-	member, err := s.GuildMember(i.Interaction.GuildID, memberId)
+	member, err := s.GuildMember(i.GuildID, memberId)
 	if err != nil {
 		utils.ErrorLog.Println(err)
 		// When new member is not found or has left the server
@@ -270,8 +270,8 @@ func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCrea
 			featureName,
 			responses.SetColor("df0000"),
 		)
-		s.ChannelMessageSendEmbed(
-			i.Interaction.ChannelID,
+		_, _ = s.ChannelMessageSendEmbed(
+			i.ChannelID,
 			responseEmbed,
 		)
 		return
@@ -279,7 +279,7 @@ func HandleVerificationReject(s *discordgo.Session, i *discordgo.InteractionCrea
 
 	// Kick Member
 	err = s.GuildMemberDeleteWithReason(
-		i.Interaction.GuildID,
+		i.GuildID,
 		memberId,
 		"Request rejected by admin",
 	)

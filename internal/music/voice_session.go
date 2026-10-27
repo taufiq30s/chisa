@@ -53,7 +53,7 @@ func (m *MusicBot) checkVoicePermissions(s *discordgo.Session, channelID string)
 		missing = append(missing, "Speak")
 	}
 	if len(missing) > 0 {
-		return fmt.Errorf("Missing permission: %s", strings.Join(missing, ", "))
+		return fmt.Errorf("missing permission: %s", strings.Join(missing, ", "))
 	}
 	return nil
 }

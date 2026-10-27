@@ -166,7 +166,7 @@ func (m *MusicBot) renderQueueList(s *discordgo.Session, i *discordgo.Interactio
 		fmt.Sprintf("queue-previous-%s", i.Interaction.ID), page == InitialPage,
 	).WithButton(
 		"Next", discordgo.PrimaryButton,
-		fmt.Sprintf("queue-next-%s", i.Interaction.ID), page >= totalPages,
+		fmt.Sprintf("queue-next-%s", i.ID), page >= totalPages,
 	)
 
 	// isUpdate edits the existing panel; otherwise answer the deferral that
