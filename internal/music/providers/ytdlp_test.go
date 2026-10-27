@@ -201,3 +201,27 @@ func TestFindYtdlpBinaryHonoursEnv(t *testing.T) {
 		t.Errorf("FindYtdlpBinary() = %q, want the PATH fallback", got)
 	}
 }
+
+// The proxy has to be in CommonArgs, not the playback path: search runs yt-dlp
+// before any voice connection exists, so a proxy applied only at play time
+// leaves search broken exactly where it is needed (a blocked network).
+func TestCommonArgsAppliesProxy(t *testing.T) {
+	t.Setenv("YOUTUBE_POT_URL", "")
+	t.Setenv("PROXY_URL", "socks5://127.0.0.1:1080")
+	args := CommonArgs()
+	want := []string{"--no-warnings", "--proxy", "socks5://127.0.0.1:1080"}
+	if len(args) != len(want) {
+		t.Fatalf("CommonArgs() = %v, want %v", args, want)
+	}
+	for i := range want {
+		if args[i] != want[i] {
+			t.Errorf("CommonArgs()[%d] = %q, want %q", i, args[i], want[i])
+		}
+	}
+
+	// Unset must omit the flag entirely: an empty --proxy makes yt-dlp fail.
+	t.Setenv("PROXY_URL", "")
+	if got := CommonArgs(); len(got) != 1 || got[0] != "--no-warnings" {
+		t.Errorf("CommonArgs() = %v, want no --proxy when PROXY_URL is unset", got)
+	}
+}

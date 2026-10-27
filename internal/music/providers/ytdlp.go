@@ -61,10 +61,17 @@ func FindYtdlpBinary() string {
 // container, so the URL is explicit. YOUTUBE_POT_URL is optional: when it is
 // unset the flag is omitted and yt-dlp falls back to its own PO token handling,
 // which is enough for search but usually fails for playback.
+//
+// PROXY_URL is applied here rather than at the playback call site so search,
+// URL resolve and playlist import go through the same proxy as playback: where
+// YouTube is blocked, yt-dlp cannot even run ytsearch without it.
 func CommonArgs() []string {
 	args := []string{"--no-warnings"}
 	if potURL, err := utils.GetEnv("YOUTUBE_POT_URL"); err == nil && potURL != "" {
 		args = append(args, "--extractor-args", "youtubepot-bgutilhttp:base_url="+potURL)
+	}
+	if proxyURL, err := utils.GetEnv("PROXY_URL"); err == nil && proxyURL != "" {
+		args = append(args, "--proxy", proxyURL)
 	}
 	return args
 }
