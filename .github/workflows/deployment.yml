@@ -6,7 +6,7 @@ name: Deploy Chisa Discord Bot to VPS
 on:
   push:
     branches:
-      - development
+      - master
 
 permissions:
   contents: read
