@@ -155,11 +155,10 @@ One short paragraph on each of the two paths that exist:
 - `docker compose up` brings up Redis and the bot together.
 - The `Dockerfile` builds a `linux/arm64` image that bundles ffmpeg and yt-dlp.
 - `.github/workflows/deployment.yml` pushes that image to Docker Hub on pushes
-  to `master`.
+  to `development`.
 
-The deployment workflow still targets `master` while the default branch is
-`development`. The README states this factually as what the workflow does. It
-does not present it as recommended practice and does not propose a fix.
+The README states what the workflow does as plain fact. No recommendation
+attached.
 
 ### 6. Development
 
@@ -209,18 +208,16 @@ removed or restated.
 Found during design, deliberately not fixed as part of the README rewrite. Each
 wants its own commit.
 
-- `VERSION` is treated as required by `internal/config/loader.go` but is absent
-  from `.env.example`, so following the example fails at startup with
-  `missing required environment variables: VERSION`.
 - `.env.example` omits `YOUTUBE_API_KEY`, which music search needs, despite
   listing the other optional variables.
-- `Dockerfile` still carries a Lavalink fallback block referencing
-  `lavalink_nodes.json`, which no longer exists.
-- `.github/workflows/deployment.yml` targets `master` while the default branch
-  is `development`.
 - `internal/music/providers/ytdlp_live_test.go` runs on every `go test ./...`
   and will fail without network access.
 - No `LICENSE` file, despite the module path being public on GitHub.
+
+Fixed in separate commits before this work started: `VERSION` added to
+`.env.example` (`849df87`), the dead Lavalink fallback block removed from the
+`Dockerfile` (`66c8fe5`), and `deployment.yml` retargeted from `master` to
+`development` (`fbd26ca`).
 
 ## Validation
 
