@@ -124,8 +124,9 @@ User Settings, Advanced, Developer Mode.
 requires `WISE_TOKEN`. Setting it to `currency_api` requires
 `CURRENCY_API_TOKEN` instead.
 
-`QUIZ_WS_PORT` defaults to 8080. `PROXY_URL` routes outbound yt-dlp traffic
-through a SOCKS5 proxy, useful where YouTube is blocked. `YTDLP_PATH` overrides
+`QUIZ_WS_PORT` defaults to 8080. `PROXY_URL` routes every outbound yt-dlp
+call (search, URL resolve, playlist import and playback) through a SOCKS5
+proxy, useful where YouTube is blocked. `YTDLP_PATH` overrides
 the bundled binary, and falls back to `yt-dlp` on `PATH`.
 
 One variable is not in `.env.example`: `YOUTUBE_API_KEY`. Music search needs it.

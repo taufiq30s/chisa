@@ -18,7 +18,6 @@ import (
 
 type Streamer struct {
 	voiceConnection *discordgo.VoiceConnection
-	proxy           string
 
 	// procMu guards ytdlp/ffmpeg/paused. Pause and Resume are called from
 	// interaction goroutines while Play runs on the player goroutine, so these
@@ -29,10 +28,9 @@ type Streamer struct {
 	paused bool
 }
 
-func newStreamer(voiceConnection *discordgo.VoiceConnection, proxy string) *Streamer {
+func newStreamer(voiceConnection *discordgo.VoiceConnection) *Streamer {
 	return &Streamer{
 		voiceConnection: voiceConnection,
-		proxy:           proxy,
 	}
 }
 
@@ -115,9 +113,6 @@ func (s *Streamer) Play(ctx context.Context, track model.Track) error {
 		"--no-check-certificates",
 		"--buffer-size", "16K",
 	)
-	if s.proxy != "" {
-		ytdlpArgs = append(ytdlpArgs, "--proxy", s.proxy)
-	}
 	ytdlpArgs = append(ytdlpArgs, track.Url)
 
 	ytdlp := exec.CommandContext(playCtx, ytdlpBinary, ytdlpArgs...)

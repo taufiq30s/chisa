@@ -117,8 +117,7 @@ func (m *MusicBot) ensureVoiceJoined(s *discordgo.Session, channelID string) err
 	if err != nil {
 		return err
 	}
-	proxyURL, _ := utils.GetEnv("PROXY_URL")
-	m.setStreamer(newStreamer(vc, proxyURL))
+	m.setStreamer(newStreamer(vc))
 	return nil
 }
 
