@@ -136,20 +136,33 @@ currency — but it is easy to misread as a broken install.
 
 ## Deployment
 
-`docker compose up` brings up Redis and the bot together, reading `.env` and
-mounting `logs/`.
+`docker compose up -d` starts three services on the `chisa-net` network:
+
+- `chisa` (container `chisa-dc`) — the bot, reachable on `QUIZ_WS_PORT`.
+- `redis` — cache and state, waited on via a healthcheck.
+- `bgutil` — the sidecar that mints YouTube PO tokens, at `http://bgutil:4416`.
+
+`.env` is bind-mounted read-only into the container, not just injected. The
+process calls `godotenv.Load()`, which exits when `/app/.env` is missing, so
+`env_file:` alone is not enough.
 
 The `Dockerfile` builds for whatever platform the build targets (`TARGETARCH`)
-and bakes ffmpeg and a checksum-verified upstream yt-dlp into `./bin/yt-dlp`.
+and bakes ffmpeg, a checksum-verified upstream yt-dlp into `./bin/yt-dlp`, and
+the bgutil yt-dlp plugin into `./bin/yt-dlp-plugins/bgutil`.
 `.github/workflows/deployment.yml` builds that image and pushes it to Docker
-Hub on every push to `development`, then restarts the container on the VPS.
+Hub, then restarts the container on the VPS.
+
+`YOUTUBE_POT_URL` must not go in `.env`. It points at a service name that only
+resolves inside the compose network, so compose sets it in the `environment:`
+block. On the VPS the equivalent is `-e YOUTUBE_POT_URL=http://<pot-host>:4416`
+in `VPS_DOCKER_OPTS`, alongside `-v /srv/chisa/.env:/app/.env:ro`; without both
+the bot exits at startup, and without the token sidecar YouTube answers 403.
 
 To add an extractor without rebuilding, drop it on the host as
-`plugins/<name>/yt_dlp_plugins/extractor/<file>.py` and mount the directory over
-`/app/bin/yt-dlp-plugins:ro` (compose does this already; on the VPS append the
-same `-v` to `VPS_DOCKER_OPTS`). yt-dlp picks it up on the next `/music` call.
-The layout matters: a plugin directory pointing straight at `yt_dlp_plugins/`
-loads nothing without `--plugin-dirs`, which the bot never passes.
+`plugins/<name>/yt_dlp_plugins/extractor/<file>.py`. Compose mounts `plugins/`
+at `/app/bin/yt-dlp-plugins/local:ro`; the `local` level matters, because
+mounting the parent directory hides the baked bgutil plugin. yt-dlp picks up
+host plugins on the next `/music` call.
 
 ## Development
 
