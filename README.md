@@ -136,7 +136,8 @@ currency — but it is easy to misread as a broken install.
 `docker compose up` brings up Redis and the bot together, reading `.env` and
 mounting `logs/`.
 
-The `Dockerfile` builds a `linux/arm64` image with ffmpeg and yt-dlp baked in.
+The `Dockerfile` builds for whatever platform the build targets (`TARGETARCH`)
+and bakes ffmpeg and a checksum-verified upstream yt-dlp into `./bin/yt-dlp`.
 `.github/workflows/deployment.yml` builds that image and pushes it to Docker
 Hub on every push to `development`, then restarts the container on the VPS.
 

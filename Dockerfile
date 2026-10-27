@@ -1,5 +1,5 @@
 # ── Stage 1: build ───────────────────────────────────────────────────────────
-FROM golang:alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 WORKDIR /app
 
@@ -10,28 +10,52 @@ RUN go mod download
 # Copy source
 COPY . .
 
-ENV GOARCH=arm64 GOOS=linux CGO_ENABLED=0
+# buildx fills TARGETOS/TARGETARCH from `platforms:`; a plain `docker build`
+# leaves them empty and Go falls back to the host. Never hardcode these: a
+# hardcoded arch makes the image unrunnable on every other machine.
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath -ldflags="-s -w" -o chisa ./cmd
 
-RUN go build -trimpath -ldflags="-s -w" -o chisa ./cmd
+# ── Stage 2: yt-dlp ──────────────────────────────────────────────────────────
+# Upstream's musl build is a self-contained binary, so the runtime image needs
+# no python3 (~70 MB). Pinning the APK package instead would freeze an extractor
+# that YouTube breaks within weeks, and yt-dlp advises against self-updating
+# packaged installs. `latest/download` tracks releases, SHA2-256SUMS keeps the
+# download honest.
+FROM alpine:3.24 AS ytdlp
 
-# Stage the bundled yt-dlp only when the checkout has one. Copying the whole
-# directory always succeeds, unlike a COPY of bin/yt-dlp which breaks the build
-# for anyone who never ran `make` (bin/ is gitignored). The runtime apk package
-# is the fallback, so a missing bundle is not fatal.
-# ponytail: no download step; upgrade path is a pinned `apk add yt-dlp=...`.
-RUN mkdir -p /bundle && if [ -f bin/yt-dlp ]; then cp bin/yt-dlp /bundle/ && chmod +x /bundle/yt-dlp; fi
+RUN apk add --no-cache ca-certificates curl
 
-# ── Stage 2: runtime ──────────────────────────────────────────────────────────
-FROM alpine:latest
+ARG TARGETARCH
+RUN set -eu; \
+    case "${TARGETARCH:-amd64}" in \
+        amd64) asset=yt-dlp_musllinux ;; \
+        arm64) asset=yt-dlp_musllinux_aarch64 ;; \
+        *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    base=https://github.com/yt-dlp/yt-dlp/releases/latest/download; \
+    curl -fsSL -o /yt-dlp "$base/$asset"; \
+    curl -fsSL -o /sums "$base/SHA2-256SUMS"; \
+    hash=$(awk -v f="$asset" '$2 == f { print $1 }' /sums); \
+    [ -n "$hash" ] || { echo "no checksum published for $asset" >&2; exit 1; }; \
+    echo "$hash  /yt-dlp" | sha256sum -c -; \
+    chmod +x /yt-dlp; \
+    rm /sums
 
-RUN apk add --no-cache ca-certificates tzdata ffmpeg yt-dlp
+# ── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM alpine:3.24
+
+RUN apk add --no-cache ca-certificates tzdata ffmpeg
 
 WORKDIR /app
 
 COPY --from=builder /app/chisa .
-COPY --from=builder /bundle/ ./bin/
 COPY --from=builder /app/assets/ ./assets/
+# FindYtdlpBinary prefers ./bin/yt-dlp over PATH, so no code change is needed.
+COPY --from=ytdlp /yt-dlp ./bin/yt-dlp
 
-RUN chmod +x chisa && mkdir -p logs
+RUN chmod +x chisa bin/yt-dlp && mkdir -p logs
 
 CMD ["./chisa"]
