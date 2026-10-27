@@ -1,5 +1,8 @@
-bin/
 build/
 .env
 *.backup
 logs/
+.vendor/
+.git/
+bin/
+plugins/

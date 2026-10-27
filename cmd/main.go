@@ -14,6 +14,7 @@ import (
 	"github.com/taufiq30s/chisa/internal/config"
 	"github.com/taufiq30s/chisa/internal/handlers"
 	"github.com/taufiq30s/chisa/internal/moderation"
+	"github.com/taufiq30s/chisa/internal/music"
 	"github.com/taufiq30s/chisa/internal/responses"
 	"github.com/taufiq30s/chisa/utils"
 )
@@ -29,6 +30,7 @@ func main() {
 	if err != nil {
 		utils.ErrorLog.Fatalf("Configuration error: %s\n", err)
 	}
+	fmt.Println("Version:", cfg.Version)
 
 	moderation.SetConfig(cfg)
 	responses.SetVersion(cfg.Version)
@@ -41,10 +43,12 @@ func main() {
 
 	// Connect to Discord and start cron jobs.
 	chisa.Start(cfg.BotToken, cfg.GuildID)
+	moderation.SetRedis(chisa.Redis)
+	go moderation.ReplayPendingVerifications(chisa.Session)
 
 	// Initialize features and register Discord handlers.
 	registry := handlers.NewRegistry(chisa)
-	// go chisa.InitializeMusicClient(&wg, cfg.GuildID)
+	go chisa.InitializeMusicClient(&wg, cfg.GuildID)
 	go chisa.InitializeCurrencyClient(&wg)
 	go chisa.InitializeQuizService(&wg)
 	go registry.Register(&wg, cfg.GuildID)
@@ -62,6 +66,14 @@ func main() {
 	defer shutdownCancel()
 
 	utils.InfoLog.Println("Shutting down...")
+
+	// Shutdown music bot gracefully
+	if chisa.Music != nil {
+		if musicBot, ok := chisa.Music.(*music.MusicBot); ok {
+			musicBot.Shutdown()
+		}
+	}
+
 	chisa.StopJobs()
 	go chisa.CloseRedis()
 	go registry.Unregister(cfg.GuildID)

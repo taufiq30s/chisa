@@ -130,7 +130,7 @@ func (c *Currency) filterResult(ctx context.Context, query string, data []*disco
 	if err != nil {
 		utils.ErrorLog.Println("Failed to encode autofill result:", err)
 	} else {
-		err = c.rdb.SetEx(ctx, "currency:autofill:"+query, buff.Bytes(), time.Hour).Err()
+		err = c.rdb.Set(ctx, "currency:autofill:"+query, buff.Bytes(), time.Hour).Err()
 		if err != nil {
 			utils.ErrorLog.Println("Failed to store cache:", err)
 		}

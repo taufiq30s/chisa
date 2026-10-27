@@ -1,10 +1,15 @@
 package bot
 
 import (
+	"context"
+	"net"
+	"net/http"
 	"sync"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-co-op/gocron/v2"
+	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
 	"github.com/taufiq30s/chisa/internal/config"
 	"github.com/taufiq30s/chisa/internal/currency"
@@ -23,6 +28,24 @@ type Bot struct {
 	scheduler gocron.Scheduler
 }
 
+// newDialer builds the websocket dialer used for both the gateway and voice
+// connections. It exists to force IPv4: on hosts without a global IPv6 route,
+// Discord voice endpoints advertise AAAA records, and Discord's voice
+// handshake (discordgo voice.open) does not retry — one failed IPv6 dial
+// leaves the connection stuck until waitUntilConnected times out with
+// "timeout waiting for voice". Pinning the dial to tcp4 side-steps that
+// entirely. HandshakeTimeout is shorter than the default 45s so a dead
+// endpoint fails fast instead of eating the whole voice-wait budget.
+func newDialer() *websocket.Dialer {
+	dialer := *websocket.DefaultDialer
+	dialer.Proxy = http.ProxyFromEnvironment
+	dialer.HandshakeTimeout = 15 * time.Second
+	dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return (&net.Dialer{Timeout: 10 * time.Second}).DialContext(ctx, "tcp4", addr)
+	}
+	return &dialer
+}
+
 func (chisa *Bot) Start(token string, guildId string) {
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -37,6 +60,7 @@ func (chisa *Bot) Start(token string, guildId string) {
 		}
 
 		utils.InfoLog.Println("Connecting to discord...")
+		session.Dialer = newDialer()
 		err = session.Open()
 		if err != nil {
 			utils.ErrorLog.Fatalf("Failed to open connection: %s\n", err)
@@ -76,17 +100,15 @@ func (bot *Bot) InitializeMusicClient(wg *sync.WaitGroup, guildId string) {
 	defer wg.Done()
 	utils.InfoLog.Println("Connecting to music client...")
 
-	musicBot := music.New(
+	musicBot, err := music.New(
 		bot.Session,
 		bot.Session.State.User.ID,
 		guildId,
+		bot.Redis,
 	)
-
-	if err := musicBot.ConnectToNodes(); err != nil {
-		utils.ErrorLog.Printf("Music client failed to connect to nodes: %v — music commands will be unavailable\n", err)
-	} else {
-		musicBot.InitializeListenerFunctions()
-		go musicBot.InitializeCleanSearchCache()
+	if err != nil {
+		utils.ErrorLog.Printf("Failed to create music client: %v\n", err)
+		return
 	}
 
 	bot.Music = musicBot

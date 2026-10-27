@@ -3,8 +3,6 @@
 // construction time instead of calling utils.GetEnv themselves.
 package config
 
-import "time"
-
 // Config holds every runtime-configurable value for the bot.
 // Fields are grouped by subsystem.
 type Config struct {
@@ -33,9 +31,4 @@ type Config struct {
 	// App
 	Version    string
 	QuizWSPort string
-
-	// Derived / computed at load time (not from env directly)
-	NodeConnectionTimeout      time.Duration
-	SearchCacheExpiryDuration  time.Duration
-	SearchCacheCleanupInterval time.Duration
 }

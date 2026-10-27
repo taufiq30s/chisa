@@ -45,8 +45,4 @@ const (
 	// HTTP Error Patterns
 	// HTTPNotFoundError is the error pattern to detect 404 Not Found errors
 	HTTPNotFoundError = "404 Not Found"
-
-	// Array Indices
-	// FirstGuildIndex is the index of the first guild in State.Guilds array
-	FirstGuildIndex = 0
 )

@@ -1,5 +1,8 @@
 bin/*
 build/*
 .env
-lavalink_nodes.json
+.vendor/
 *.backup
+logs/
+docs/superpowers/*
+plugins/

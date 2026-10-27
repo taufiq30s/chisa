@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"io"
 	"log"
 	"os"
 )
@@ -20,6 +21,9 @@ var (
 )
 
 func loadFile() {
+	if err := os.MkdirAll("logs", 0o755); err != nil {
+		log.Fatal(err)
+	}
 	infoFile, err = os.OpenFile("logs/info.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, FilePermissionReadWrite)
 	if err != nil {
 		log.Fatal(err)
@@ -38,10 +42,17 @@ func loadFile() {
 	}
 }
 
+// tee returns a writer that writes to both the file and stderr. Without this a
+// fatal startup error only ever reaches logs/error.txt, so `docker logs` shows
+// nothing but the banner and the exit code.
+func tee(f *os.File) io.Writer {
+	return io.MultiWriter(f, os.Stderr)
+}
+
 func init() {
 	loadFile()
-	InfoLog = log.New(infoFile, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	WarningLog = log.New(warningFile, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile)
-	ErrorLog = log.New(errorFile, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-	DebugLog = log.New(debugFile, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+	InfoLog = log.New(tee(infoFile), "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+	WarningLog = log.New(tee(warningFile), "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile)
+	ErrorLog = log.New(tee(errorFile), "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+	DebugLog = log.New(tee(debugFile), "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
 }

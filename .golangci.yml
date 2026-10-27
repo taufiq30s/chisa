@@ -1,0 +1,11 @@
+version: "2"
+
+linters:
+  exclusions:
+    presets:
+      - std-error-handling
+    rules:
+      - linters: [errcheck]
+        text: "Error return value of `\\(\\*github.com/taufiq30s/chisa/internal/responses\\."
+      - linters: [errcheck]
+        text: "Error return value of `(client\\.)?conn\\.(Close|WriteMessage)`"

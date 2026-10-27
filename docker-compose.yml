@@ -1,26 +1,67 @@
 services:
   redis:
+    container_name: chisa-redis
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    networks:
+      - chisa-net
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Solves YouTube's "Sign in to confirm you're not a bot" on playback. The tag
+  # must stay in step with BGUTIL_VERSION in the Dockerfile: the plugin checks
+  # the server version over /ping and refuses a mismatch.
+  bgutil:
+    container_name: chisa-bgutil
+    image: brainicism/bgutil-ytdlp-pot-provider:2.0.2-node
+    restart: unless-stopped
+    networks:
+      - chisa-net
 
   chisa:
+    # The VPS has no source tree, only this file and .env, so it pulls this tag
+    # instead of building. Locally `docker compose build` tags the same name.
+    image: taufiq30s/chisa:latest
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: chisa-dc
     restart: unless-stopped
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      bgutil:
+        condition: service_started
     env_file:
       - .env
+    # REDIS_URL is overridden because .env carries the host-facing value.
+    # YOUTUBE_POT_URL cannot live in .env: the service name only resolves here.
     environment:
       REDIS_URL: redis://redis:6379
+      YOUTUBE_POT_URL: http://bgutil:4416
+    networks:
+      - chisa-net
+    ports:
+      # net.Listen binds all interfaces, so the container side can stay fixed:
+      # only the host side has to follow QUIZ_WS_PORT.
+      - "${QUIZ_WS_PORT:-8080}:${QUIZ_WS_PORT:-8080}"
     volumes:
-      - ./lavalink_nodes.json:/app/lavalink_nodes.json:ro
       - ./logs:/app/logs
+      # Mounted into a *subdirectory* on purpose: mounting over
+      # /app/bin/yt-dlp-plugins hides the baked bgutil plugin, and yt-dlp then
+      # reports "PO Token Providers: none" and YouTube 403s every stream.
+      - ./plugins:/app/bin/yt-dlp-plugins/local:ro
+      # godotenv.Load() reads a .env *file* and exits when it is missing, which
+      # env_file alone never provides.
+      - ./.env:/app/.env:ro
 
 volumes:
   redis_data:
+
+networks:
+  chisa-net:

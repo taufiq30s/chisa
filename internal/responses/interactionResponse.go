@@ -27,6 +27,13 @@ func InteractionResponse(session *discordgo.Session, interaction *discordgo.Inte
 }
 
 func (r *interactionResponse) AddNewRow() *interactionResponse {
+	// Skip empty rows. Discord rejects a component row with no children
+	// ("Invalid Form Body"), which fails the whole response and leaves the
+	// interaction stuck in the deferred state. Calling AddNewRow() before any
+	// WithButton/WithSelectMenu is harmless now instead of fatal.
+	if len(r.temporaryComponents) == 0 {
+		return r
+	}
 	r.components = append(r.components, discordgo.ActionsRow{
 		Components: r.temporaryComponents,
 	})
@@ -88,6 +95,14 @@ func (r *interactionResponse) Defer() error {
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 	})
 	return err
+}
+
+// DeferUpdate acknowledges a component interaction without changing the
+// message yet. Follow up with SendDefer/ExecuteDefer.
+func (r *interactionResponse) DeferUpdate() error {
+	return r.session.InteractionRespond(r.interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	})
 }
 
 func (r *interactionResponse) Send() error {
