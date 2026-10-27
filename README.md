@@ -89,6 +89,9 @@ You need Go 1.27, a Redis server, ffmpeg, and yt-dlp. ffmpeg must be on your
 the `Dockerfile` puts it. Both directories are yours to populate; `bin/` is
 gitignored.
 
+yt-dlp plugins go in `plugins/<name>/yt_dlp_plugins/`; the containers mount that
+directory as `bin/yt-dlp-plugins`, which yt-dlp scans automatically.
+
 1. Copy the example config: `cp .env.example .env`
 2. Fill in the eleven required variables below.
 3. Build and start: `make run`
@@ -140,6 +143,13 @@ The `Dockerfile` builds for whatever platform the build targets (`TARGETARCH`)
 and bakes ffmpeg and a checksum-verified upstream yt-dlp into `./bin/yt-dlp`.
 `.github/workflows/deployment.yml` builds that image and pushes it to Docker
 Hub on every push to `development`, then restarts the container on the VPS.
+
+To add an extractor without rebuilding, drop it on the host as
+`plugins/<name>/yt_dlp_plugins/extractor/<file>.py` and mount the directory over
+`/app/bin/yt-dlp-plugins:ro` (compose does this already; on the VPS append the
+same `-v` to `VPS_DOCKER_OPTS`). yt-dlp picks it up on the next `/music` call.
+The layout matters: a plugin directory pointing straight at `yt_dlp_plugins/`
+loads nothing without `--plugin-dirs`, which the bot never passes.
 
 ## Development
 

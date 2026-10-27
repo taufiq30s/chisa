@@ -5,3 +5,4 @@ build/*
 *.backup
 logs/
 docs/superpowers/*
+plugins/

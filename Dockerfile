@@ -56,6 +56,8 @@ COPY --from=builder /app/assets/ ./assets/
 # FindYtdlpBinary prefers ./bin/yt-dlp over PATH, so no code change is needed.
 COPY --from=ytdlp /yt-dlp ./bin/yt-dlp
 
-RUN chmod +x chisa bin/yt-dlp && mkdir -p logs
+# yt-dlp scans <exe-dir>/yt-dlp-plugins/<name>/yt_dlp_plugins/ with no flag, so
+# a host directory mounted here is picked up without a Go change or rebuild.
+RUN chmod +x chisa bin/yt-dlp && mkdir -p logs bin/yt-dlp-plugins
 
 CMD ["./chisa"]
