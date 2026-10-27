@@ -2,6 +2,7 @@ package providers
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -176,9 +177,27 @@ func TestFindYtdlpBinaryHonoursEnv(t *testing.T) {
 
 	// An empty value means "unset": it must fall through to the bundled binary
 	// when one exists, not return "" and make exec fail with no useful message.
+	// The bundled copy comes from a temp dir because bin/ is gitignored, so a CI
+	// checkout has none.
 	t.Setenv("YTDLP_PATH", "")
-	t.Chdir("../../..")
+	dir := t.TempDir()
+	bundled := filepath.Join(dir, "bin", "yt-dlp")
+	if err := os.MkdirAll(filepath.Dir(bundled), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bundled, nil, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
 	if got := FindYtdlpBinary(); got != filepath.Join(".", "bin", "yt-dlp") {
 		t.Errorf("FindYtdlpBinary() = %q, want the bundled binary", got)
+	}
+
+	// No bundled copy: fall back to PATH.
+	if err := os.Remove(bundled); err != nil {
+		t.Fatal(err)
+	}
+	if got := FindYtdlpBinary(); got != "yt-dlp" {
+		t.Errorf("FindYtdlpBinary() = %q, want the PATH fallback", got)
 	}
 }
