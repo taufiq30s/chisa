@@ -24,6 +24,9 @@ services:
       - chisa-net
 
   chisa:
+    # The VPS has no source tree, only this file and .env, so it pulls this tag
+    # instead of building. Locally `docker compose build` tags the same name.
+    image: taufiq30s/chisa:latest
     build:
       context: .
       dockerfile: Dockerfile

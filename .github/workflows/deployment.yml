@@ -38,17 +38,59 @@ jobs:
         platforms: linux/arm64
         push: true
         tags: taufiq30s/chisa:latest
-    
-    - name: Deploy to VPS
-      uses: appleboy/ssh-action@master
+
+    - name: Copy compose file to VPS
+      uses: appleboy/scp-action@v1
       with:
         host: ${{ secrets.VPS_HOST }}
         port: ${{ secrets.VPS_PORT }}
         username: ${{ secrets.VPS_USERNAME }}
         key: ${{ secrets.VPS_KEY }}
+        source: docker-compose.yml
+        target: ${{ secrets.CHISA_PATH }}
+        # Never `rm: true`: that directory also holds the live .env.
+        overwrite: true
+
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1
+      env:
+        CHISA_PATH: ${{ secrets.CHISA_PATH }}
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        port: ${{ secrets.VPS_PORT }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_KEY }}
+        envs: CHISA_PATH
         script: |
-          docker pull taufiq30s/chisa:latest
-          docker stop chisa-dc || true
-          docker rm chisa-dc || true
-          docker run -d --restart always ${{ secrets.VPS_DOCKER_OPTS }} --name chisa-dc -p ${{ secrets.CHISA_WS_EVENT }}:${{ secrets.CHISA_WS_EVENT }} taufiq30s/chisa:latest
+          # ssh-action v1 dropped `script_stop`; set -e replaces it.
+          set -eu
+
+          test -n "${CHISA_PATH:-}" || { echo "CHISA_PATH secret is empty"; exit 1; }
+          cd "$CHISA_PATH"
+
+          # Both the .env mount and env_file: resolve relative to this file, and
+          # godotenv.Load() exits on a missing .env.
+          test -f .env || { echo "missing $(pwd)/.env"; exit 1; }
+
+          if docker compose version >/dev/null 2>&1; then DC="docker compose"
+          elif command -v docker-compose >/dev/null 2>&1; then DC="docker-compose"
+          else echo "no docker compose plugin on host"; exit 1
+          fi
+
+          # Earlier releases started the bot with `docker run --name chisa-dc`,
+          # which owns the name compose now wants for the same container.
+          docker rm -f chisa-dc 2>/dev/null || true
+
+          $DC pull
+          $DC up -d --remove-orphans
+          docker image prune -f
+
+          # Fail the workflow instead of leaving a dead bot behind. A restart
+          # loop also reports State.Running=true, so watch RestartCount too:
+          # godotenv exits on a missing .env and compose restarts it forever.
+          sleep 10
+          $DC ps
+          state=$(docker inspect -f '{{.State.Running}} {{.RestartCount}}' chisa-dc)
+          echo "state=$state"
+          test "$state" = "true 0"
 
