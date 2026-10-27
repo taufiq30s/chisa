@@ -39,6 +39,37 @@ jobs:
         push: true
         tags: taufiq30s/chisa:latest
 
+    - name: Prepare deploy directory on VPS
+      uses: appleboy/ssh-action@v1
+      env:
+        CHISA_PATH: ${{ secrets.CHISA_PATH }}
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        port: ${{ secrets.VPS_PORT }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_KEY }}
+        envs: CHISA_PATH
+        script: |
+          set -eu
+
+          test -n "${CHISA_PATH:-}" || { echo "CHISA_PATH secret is empty"; exit 1; }
+
+          # scp-action untars as VPS_USERNAME, so a directory owned by root gives
+          # `tar: docker-compose.yml: Cannot open: Permission denied`. Docker
+          # creates ./logs in here too, which root owns for the same reason.
+          mkdir -p "$CHISA_PATH"
+          if [ ! -w "$CHISA_PATH" ]; then
+            if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+              sudo -n chown "$(id -u):$(id -g)" "$CHISA_PATH"
+            else
+              echo "CHISA_PATH=$CHISA_PATH is not writable by $(id -un)" >&2
+              echo "fix on the VPS: sudo chown $(id -un) '$CHISA_PATH'" >&2
+              exit 1
+            fi
+          fi
+
+          touch "$CHISA_PATH/.write-check" && rm -f "$CHISA_PATH/.write-check"
+
     - name: Copy compose file to VPS
       uses: appleboy/scp-action@v1
       with:
