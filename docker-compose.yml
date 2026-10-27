@@ -19,7 +19,6 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
     volumes:
-      - ./lavalink_nodes.json:/app/lavalink_nodes.json:ro
       - ./logs:/app/logs
 
 volumes:

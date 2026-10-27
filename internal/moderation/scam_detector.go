@@ -34,7 +34,10 @@ var (
 		if err != nil {
 			utils.ErrorLog.Println(err)
 		}
-		s.GuildBanCreateWithReason(i.GuildID, userId, "Compromise account/indicated scam", GuildBanDeleteMessageDays)
+		err = s.GuildBanCreateWithReason(i.GuildID, userId, "Compromise account/indicated scam", GuildBanDeleteMessageDays)
+		if err != nil {
+			utils.ErrorLog.Println(err)
+		}
 	}
 	RemoveSuspectHandler = func(s *discordgo.Session, i *discordgo.InteractionCreate, params ...interface{}) {
 		userId := i.MessageComponentData().CustomID[strings.LastIndex(i.MessageComponentData().CustomID, "-")+StringOffsetAfterLastIndex:]
@@ -49,7 +52,10 @@ var (
 		if err != nil {
 			utils.ErrorLog.Println(err)
 		}
-		s.GuildMemberTimeout(i.GuildID, userId, nil)
+		err = s.GuildMemberTimeout(i.GuildID, userId, nil)
+		if err != nil {
+			utils.ErrorLog.Println(err)
+		}
 	}
 )
 
@@ -230,7 +236,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 	})
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
+		_, _ = s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
 			titleError,
 			fmt.Sprintf(
 				"Failed to send message with error \n``%s``",
@@ -243,7 +249,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 	err = s.GuildMemberTimeout(m.GuildID, m.Author.ID, &timeout)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
+		_, _ = s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
 			titleError,
 			fmt.Sprintf(
 				"Failed to timeout with error \n``%s``",
@@ -256,7 +262,7 @@ func HandleScamMessage(s *discordgo.Session, m *discordgo.MessageCreate, code ui
 	err = s.ChannelMessageDelete(m.ChannelID, m.ID)
 	if err != nil {
 		utils.ErrorLog.Println(err)
-		s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
+		_, _ = s.ChannelMessageSendEmbed(logChannel, responses.CreateMessageEmbed(s,
 			titleError,
 			fmt.Sprintf(
 				"Failed to remove message with error \n``%s``",

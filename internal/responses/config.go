@@ -19,7 +19,4 @@ const (
 	// Initialization values
 	InitialValue = 0 // Initial value for counters/accumulator
 	InitialBase  = 1 // Initial base value for number conversion
-
-	// Component validation
-	MinComponentCount = 0 // Minimum count for checking if components exist
 )

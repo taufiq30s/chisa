@@ -6,12 +6,24 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/disgoorg/disgolink/v3/lavalink"
 	"github.com/taufiq30s/chisa/internal/bot"
+	"github.com/taufiq30s/chisa/internal/responses"
+	"github.com/taufiq30s/chisa/utils"
 )
 
 var (
 	musicCommandHandler = func(chisa *bot.Bot, interaction *discordgo.InteractionCreate) {
+		// Acknowledge once, up front, for every music subcommand. The handlers
+		// below answer with SendDefer/ExecuteDefer, which EDIT this deferred
+		// response. Never call Defer() again further down: Discord allows only
+		// one acknowledgement per interaction and a second one fails with
+		// "40060 Interaction has already been acknowledged", after which the
+		// user sees nothing at all.
+		if err := responses.InteractionResponse(chisa.Session, interaction.Interaction).Defer(); err != nil {
+			utils.ErrorLog.Println(err)
+			return
+		}
+
 		switch options := interaction.ApplicationCommandData().Options; options[OptionIndexFirst].Name {
 		case "play":
 			chisa.Music.Load(
@@ -19,25 +31,20 @@ var (
 				interaction,
 				parseIdentifier(options[OptionIndexFirst].Options[OptionIndexFirst].StringValue()),
 			)
-		case "pause":
-			chisa.Music.Pause(chisa.Session, interaction)
-		case "resume":
-			chisa.Music.Resume(chisa.Session, interaction)
 		case "skip":
 			chisa.Music.Skip(chisa.Session, interaction)
 		case "stop":
 			chisa.Music.Stop(chisa.Session, interaction)
 		case "disconnect":
 			chisa.Music.Disconnect(chisa.Session, interaction)
-		case "shownp":
-			chisa.Music.ShowMusicCard(chisa.Session, interaction)
-		case "queue":
-			chisa.Music.ShowQueue(chisa.Session, interaction)
-		case "repeat":
-			chisa.Music.ToggleRepeat(chisa.Session, interaction)
-		case "volume":
-			vol := int(options[OptionIndexFirst].Options[OptionIndexFirst].IntValue())
-			chisa.Music.SetVolume(chisa.Session, interaction, vol)
+		case "clear":
+			chisa.Music.ClearQueueNow(chisa.Session, interaction)
+		case "pause":
+			chisa.Music.Pause(chisa.Session, interaction)
+		case "resume":
+			chisa.Music.Resume(chisa.Session, interaction)
+		case "list":
+			chisa.Music.ListQueue(chisa.Session, interaction)
 		}
 	}
 	musicCommands = []*discordgo.ApplicationCommand{
@@ -76,42 +83,22 @@ var (
 				{
 					Name:        "stop",
 					Description: "Stop music player",
-					Type:        1,
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
 				{
 					Name:        "disconnect",
 					Description: "Disconnect from voice channel",
-					Type:        1,
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
 				{
-					Name:        "shownp",
-					Description: "Show prototype of new music card",
-					Type:        1,
+					Name:        "clear",
+					Description: "Remove every queued track (current track keeps playing)",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
 				{
-					Name:        "queue",
-					Description: "Show current queue",
-					Type:        1,
-				},
-				{
-					Name:        "repeat",
-					Description: "Toggle repeat for current track",
-					Type:        1,
-				},
-				{
-					Name:        "volume",
-					Description: "Set playback volume (0–200)",
-					Type:        1,
-					Options: []*discordgo.ApplicationCommandOption{
-						{
-							Type:        discordgo.ApplicationCommandOptionInteger,
-							Name:        "level",
-							Description: "Volume level (0–200, default 100)",
-							Required:    true,
-							MinValue:    func() *float64 { v := float64(0); return &v }(),
-							MaxValue:    200,
-						},
-					},
+					Name:        "list",
+					Description: "Show the current queue with pagination",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
 			},
 		},
@@ -121,7 +108,11 @@ var (
 func parseIdentifier(data string) string {
 	parsedURL, err := url.ParseRequestURI(data)
 	if err != nil {
-		return lavalink.SearchTypeYouTube.Apply(data)
+		// Not a URL at all, so it is a search phrase. Return it untouched:
+		// the youtube provider decides how to search (yt-dlp's ytsearch).
+		// Prefixing it here would make providers.IsURL treat it as a URL and
+		// every search would fail with "no provider found".
+		return data
 	}
 
 	// Handle YouTube URLs

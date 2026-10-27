@@ -3,12 +3,9 @@ package music
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/disgoorg/disgolink/v3/disgolink"
-	"github.com/disgoorg/disgolink/v3/lavalink"
-	"github.com/disgoorg/snowflake/v2"
+	"github.com/taufiq30s/chisa/internal/music/providers"
 	"github.com/taufiq30s/chisa/internal/responses"
 	"github.com/taufiq30s/chisa/utils"
 )
@@ -17,292 +14,236 @@ import (
 Play Command
 */
 func (m *MusicBot) Load(s *discordgo.Session, i *discordgo.InteractionCreate, data string) {
-	err := responses.InteractionResponse(s, i.Interaction).Defer()
-	if err != nil {
-		utils.ErrorLog.Println(err)
+	// Check the voice requirements up front but do NOT join yet. These checks
+	// are cheap and failing early means the user learns about a missing
+	// permission before browsing search results; the actual join is deferred
+	// until a track is committed (see the two ensureVoiceJoined calls below),
+	// so a cancelled search never leaves the bot idling in the channel.
+	channelID := m.ensureVoiceState(s, i)
+	if channelID == "" {
 		return
 	}
-	if m == nil {
-		utils.ErrorLog.Println("MusicBot Client is not ready.")
-		return
-	}
-	if m.Client.BestNode() == nil {
+	if err := m.verifyVoicePermissions(s, channelID); err != nil {
 		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
 			Feature:     m.featureName,
-			Title:       "No available nodes",
-			Description: "No available nodes to play music. Please contact administrator.",
-		}).Execute()
-		return
-	}
-	// Create voicestate
-	voiceState, err := s.State.VoiceState(i.GuildID, i.Member.User.ID)
-	if err != nil {
-		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
-			Feature:     m.featureName,
-			Title:       "Error while getting voice state",
-			Description: err.Error(),
-		}).Execute()
-	}
-
-	// Find track and store selected track
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	var playingTrack *lavalink.Track
-	defer cancel()
-
-	m.Client.BestNode().LoadTracksHandler(ctx, data, disgolink.NewResultHandler(
-		func(track lavalink.Track) {
-			if m.player.Track() == nil {
-				playingTrack = &track
-			}
-			m.addToQueue(&track, i)
-		},
-		func(playlist lavalink.Playlist) {
-			if m.player.Track() == nil {
-				playingTrack = &playlist.Tracks[0]
-			}
-			m.addPlaylistToQueue(&playlist, i)
-		},
-		func(tracks []lavalink.Track) {
-			m.search(s, i, tracks)
-		},
-		func() {
-			responses.ErrorResponse(s, i, &responses.ErrorResponseData{
-				Feature:     m.featureName,
-				Title:       "No tracks found",
-				Description: "No tracks found for: " + data,
-			}).ExecuteDefer()
-		},
-		func(err error) {
-			responses.ErrorResponse(s, i, &responses.ErrorResponseData{
-				Feature:     m.featureName,
-				Title:       "Invalid URL",
-				Description: "The provider URL is invalid.",
-			}).ExecuteDefer()
-			utils.ErrorLog.Println(err.Error())
-		}))
-
-	if playingTrack == nil {
-		return
-	}
-
-	if err := s.ChannelVoiceJoinManual(i.GuildID, voiceState.ChannelID, false, false); err != nil {
-		utils.ErrorLog.Printf("failed to join voice channel: %v\n", err)
-		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
-			Feature:     m.featureName,
-			Title:       "Failed to join voice channel",
+			Title:       "Error while joining voice channel",
 			Description: err.Error(),
 		}).ExecuteDefer()
 		return
 	}
-	m.Play(playingTrack)
-}
 
-func (m *MusicBot) Play(track *lavalink.Track) {
-	utils.InfoLog.Println("Player Node: ", m.player.Node().Config().Name)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Find track and store selected track.
+	// 20s, not 2s: a yt-dlp cold search measures ~2.5s and a slow network can
+	// triple that. Too short a deadline cancels yt-dlp mid-search and the user
+	// sees "context deadline exceeded" instead of results.
+	// A URL gets the playlist-sized deadline: extracting a playlist walks every
+	// entry, and a direct video URL only ever needs one page, so sharing the
+	// longer deadline there costs nothing but a slow failure instead of an early
+	// one. Searches keep the short deadline because the picker must feel snappy.
+	resolveTimeout := ResolveTimeout
+	if providers.IsURL(data) {
+		resolveTimeout = PlaylistResolveTimeout
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), resolveTimeout)
 	defer cancel()
 
-	err := m.player.Update(ctx, lavalink.WithTrack(*track))
+	result, isSearch, err := m.resolver.Resolve(ctx, data)
 	if err != nil {
-		utils.ErrorLog.Println("failed to update player:", err)
-	}
-}
-
-func (m *MusicBot) Skip(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	player := m.Client.Player(snowflake.MustParse(i.GuildID))
-	if player.Track() == nil {
-		err := responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
 			Feature:     m.featureName,
-			Title:       "No track playing",
-			Description: "There is no track playing.",
-		}).Execute()
-		if err != nil {
-			utils.ErrorLog.Println("Error when create error response", err)
+			Title:       "Error while resolving track",
+			Description: err.Error(),
+		}).ExecuteDefer()
+		return
+	}
+	if len(result) == 0 {
+		description := "Please check your URL"
+		if isSearch {
+			// A search that keeps nothing is not a failure: yt-dlp found only
+			// live streams, playlists, or nothing at all for this query.
+			description = "No playable video matched your search. Try different keywords."
 		}
-		return
-	}
-
-	responses.InteractionResponse(
-		s, i.Interaction,
-	).WithEmbed(
-		responses.CreateMessageEmbed(
-			s,
-			"Skipped",
-			"Track Skipped.",
-			m.featureName,
-			responses.SetColor("0bdd47"),
-		)).Send()
-	m.setNextTrackAsInteractionReply(i)
-	player.Update(context.Background(), lavalink.WithPosition(player.Track().Info.Length))
-}
-
-func (m *MusicBot) Pause(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	player := m.Client.Player(snowflake.MustParse(i.GuildID))
-	if player.Track() == nil {
 		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
 			Feature:     m.featureName,
-			Title:       "No track playing",
-			Description: "There is no track playing.",
-		}).Execute()
+			Title:       "Track Not Found",
+			Description: description,
+		}).ExecuteDefer()
 		return
 	}
-	player.Update(context.Background(), lavalink.WithPaused(true))
+	if isSearch {
+		m.search(s, i, result)
+		return
+	}
+
+	// A direct URL is committed right here, so join now. The interaction is
+	// still deferred, which is why a join failure can reply normally.
+	if err := m.ensureVoiceJoined(s, channelID); err != nil {
+		utils.ErrorLog.Println("Failed to join voice channel:", err)
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "Error while joining voice channel",
+			Description: err.Error(),
+		}).ExecuteDefer()
+		return
+	}
+
+	// A non-search resolve that yields several tracks is a playlist: queue all of
+	// them behind one join and one summary card instead of picking result[0].
+	if len(result) > 1 {
+		m.addPlaylistToQueue(i, result)
+		return
+	}
+
+	m.addToQueue(result[0], i)
+}
+
+// Skip stops the current track and moves straight to the next one.
+// Note what is NOT done here: isPlaying stays true and the queue is untouched.
+// The player goroutine does all of that itself when Streamer.Play returns, which
+// is why Skip is just a cancel - it never races the loop for ownership of state.
+func (m *MusicBot) Skip(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	m.queueMu.Lock()
+	cancel := m.playCtxCancel
+	m.queueMu.Unlock()
+
+	if cancel == nil {
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "Nothing is playing",
+			Description: "There is no track to skip.",
+		}).ExecuteDefer()
+		return
+	}
+	cancel()
+
 	embed := responses.CreateMessageEmbed(
-		s, "Paused",
-		"Paused.",
+		s, "Skipped",
+		"Skipped the current track.",
 		m.featureName,
 		responses.SetColor("0bdd47"),
 	)
-	responses.InteractionResponse(
-		s, i.Interaction,
-	).WithEmbed(embed).Send()
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(embed).SendDefer()
 }
 
-func (m *MusicBot) Resume(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	player := m.Client.Player(snowflake.MustParse(i.GuildID))
-	if player.Track() == nil {
-		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
-			Feature:     m.featureName,
-			Title:       "No track playing",
-			Description: "There is no track playing.",
-		}).Execute()
-		return
-	}
-	player.Update(context.Background(), lavalink.WithPaused(false))
-	embed := responses.CreateMessageEmbed(
-		s, "Resumed",
-		"Resumed.",
-		m.featureName,
-		responses.SetColor("0bdd47"),
-	)
-	responses.InteractionResponse(
-		s, i.Interaction,
-	).WithEmbed(embed).Send()
+// HandleVoiceLeave tears everything down without replying to anything. The
+// voice state event calls it when Discord removes the bot from the channel:
+// there is no interaction to answer, but the player goroutine still has to
+// exit before the voice connection is dropped, and the streamer has to be
+// forgotten or the next /music play would reuse a dead connection.
+//
+// Safe to call twice for one leave: stopPlayback returns immediately when no
+// player is running, ClearQueue is idempotent and takeStreamer hands the
+// streamer to exactly one caller.
+func (m *MusicBot) HandleVoiceLeave() {
+	// Discord already pulled the bot out, so there is nothing left to time out.
+	m.cancelIdleDisconnect()
+	m.stopPlayback()
+	m.ClearQueue()
+	m.disconnectFromVoiceChannel()
 }
 
+// Stop halts playback and empties the queue.
+// stopPlayback blocks until the player goroutine has actually exited, so a
+// /music play arriving right after this cannot spawn a second player loop.
 func (m *MusicBot) Stop(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	player := m.Client.Player(snowflake.MustParse(i.GuildID))
-	if player.Track() == nil {
-		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
-			Feature:     m.featureName,
-			Title:       "No track playing",
-			Description: "There is no track playing.",
-		}).Execute()
-		return
-	}
-	m.clearQueue()
-	player.Update(context.Background(), lavalink.WithNullTrack())
+	m.cancelIdleDisconnect()
+	m.stopPlayback()
+	m.ClearQueue()
+
+	// Stop empties the queue, which is one of the idle triggers: leave after the
+	// grace period instead of dropping the connection immediately, so a quick
+	// /music play afterwards reuses it.
+	m.scheduleIdleDisconnect()
+
 	embed := responses.CreateMessageEmbed(
-		s, "Stopped playing",
-		"Stopped playing.",
+		s, "Stopped",
+		"The music player has been stopped and the queue has been cleared.",
 		m.featureName,
 		responses.SetColor("0bdd47"),
 	)
 	responses.InteractionResponse(
 		s, i.Interaction,
-	).WithEmbed(embed).Send()
+	).WithEmbed(embed).SendDefer()
 }
 
+// ClearQueue empties the pending queue but keeps the current track playing.
+// If you ever want "clear" to also stop the music, call stopPlayback first -
+// resetting the queue alone does not touch the player.
+func (m *MusicBot) ClearQueueNow(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	m.queueMu.Lock()
+	pending := len(m.queue)
+	m.queue = []trackState{}
+	m.queueMu.Unlock()
+
+	embed := responses.CreateMessageEmbed(
+		s, "Queue Cleared",
+		fmt.Sprintf("Removed %d track(s) from the queue. The current track keeps playing.", pending),
+		m.featureName,
+		responses.SetColor("0bdd47"),
+	)
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(embed).SendDefer()
+}
+
+// Disconnect stops playback, empties the queue and leaves the voice channel.
+// The order matters: stop first, then disconnect. Disconnecting while the
+// player is mid-track leaves it writing into a dead voice connection.
 func (m *MusicBot) Disconnect(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	player := m.Client.Player(snowflake.MustParse(i.GuildID))
-	if player.Track() != nil {
-		player.Update(context.Background(), lavalink.WithNullTrack())
-	}
-	s.ChannelVoiceJoinManual(i.GuildID, "", false, false)
+	m.cancelIdleDisconnect()
+	m.HandleVoiceLeave()
+
 	embed := responses.CreateMessageEmbed(
 		s, "Disconnected",
-		"Disconnected.",
+		"Left the voice channel and cleared the queue.",
 		m.featureName,
 		responses.SetColor("0bdd47"),
 	)
-	responses.InteractionResponse(
-		s, i.Interaction,
-	).WithEmbed(embed).Send()
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(embed).SendDefer()
 }
 
-func (m *MusicBot) ShowQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if len(m.queue) == 0 {
-		responses.InteractionResponse(s, i.Interaction).WithEmbed(
-			responses.CreateMessageEmbed(s, "Queue Empty", "No tracks in queue.", m.featureName, responses.SetColor("5e11d9")),
-		).Send()
-		return
-	}
-
-	const maxDisplay = 10
-	body := ""
-	for idx, t := range m.queue {
-		if idx >= maxDisplay {
-			body += fmt.Sprintf("_...and %d more_", len(m.queue)-maxDisplay)
-			break
-		}
-		title := t.lavaTrack.Info.Title
-		author := t.lavaTrack.Info.Author
-		lengthSec := int(t.lavaTrack.Info.Length.Milliseconds()) / 1000
-		body += fmt.Sprintf("%d. **%s — %s** `%02d:%02d`\n", idx+1, author, title, lengthSec/60, lengthSec%60)
-	}
-
-	repeatStatus := "Off"
-	if m.repeat {
-		repeatStatus = "On"
-	}
-	body += fmt.Sprintf("\n🔁 Repeat: **%s**", repeatStatus)
-
-	responses.InteractionResponse(s, i.Interaction).WithEmbed(
-		responses.CreateMessageEmbed(s,
-			fmt.Sprintf("Queue (%d tracks)", len(m.queue)),
-			body,
-			m.featureName,
-			responses.SetColor("5e11d9"),
-		),
-	).Send()
-}
-
-func (m *MusicBot) SetVolume(s *discordgo.Session, i *discordgo.InteractionCreate, volume int) {
-	if volume < 0 {
-		volume = 0
-	}
-	if volume > 200 {
-		volume = 200
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	player := m.Client.Player(m.guildID)
-	if err := player.Update(ctx, lavalink.WithVolume(volume)); err != nil {
-		utils.ErrorLog.Printf("failed to set volume: %v\n", err)
+// Pause freezes the current track. It does not touch the queue or the player
+// loop, so Skip/Stop keep working while paused: both of those cancel the play
+// context, which unwinds Streamer.Play even with the children SIGSTOPped.
+func (m *MusicBot) Pause(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	streamer := m.currentStreamer()
+	if streamer == nil {
 		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
 			Feature:     m.featureName,
-			Title:       "Failed to set volume",
-			Description: err.Error(),
-		}).Execute()
+			Title:       "Nothing is playing",
+			Description: "There is no active playback to pause.",
+		}).ExecuteDefer()
 		return
 	}
-	responses.InteractionResponse(s, i.Interaction).WithEmbed(
-		responses.CreateMessageEmbed(s,
-			fmt.Sprintf("Volume set to %d%%", volume),
-			"",
-			m.featureName,
-			responses.SetColor("0bdd47"),
-		),
-	).Send()
-}
-
-func (m *MusicBot) ToggleRepeat(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	m.repeat = !m.repeat
-	status := "disabled"
-	if m.repeat {
-		status = "enabled"
+	if err := streamer.Pause(); err != nil {
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "Error while pausing",
+			Description: err.Error(),
+		}).ExecuteDefer()
+		return
 	}
-	responses.InteractionResponse(s, i.Interaction).WithEmbed(
-		responses.CreateMessageEmbed(s,
-			fmt.Sprintf("Repeat %s", status),
-			"",
-			m.featureName,
-			responses.SetColor("0bdd47"),
-		),
-	).Send()
+	embed := responses.CreateMessageEmbed(s, "Paused", "Playback paused.", m.featureName, responses.SetColor("0bdd47"))
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(embed).SendDefer()
 }
 
-// ClearQueue removes all tracks from the queue.
-func (m *MusicBot) ClearQueue() {
-	m.clearQueue()
+// Resume undoes Pause.
+func (m *MusicBot) Resume(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	streamer := m.currentStreamer()
+	if streamer == nil {
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "Nothing is playing",
+			Description: "There is no active playback to resume.",
+		}).ExecuteDefer()
+		return
+	}
+	if err := streamer.Resume(); err != nil {
+		responses.ErrorResponse(s, i, &responses.ErrorResponseData{
+			Feature:     m.featureName,
+			Title:       "Error while resuming",
+			Description: err.Error(),
+		}).ExecuteDefer()
+		return
+	}
+	embed := responses.CreateMessageEmbed(s, "Resumed", "Playback resumed.", m.featureName, responses.SetColor("0bdd47"))
+	responses.InteractionResponse(s, i.Interaction).WithEmbed(embed).SendDefer()
 }

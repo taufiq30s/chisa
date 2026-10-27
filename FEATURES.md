@@ -16,6 +16,7 @@ Chisa is a multi-purpose Discord bot providing music playback, currency conversi
 | `/music skip` | Skip to the next track in queue |
 | `/music stop` | Stop the player and clear queue |
 | `/music disconnect` | Disconnect bot from voice channel |
+| `/music list` | List the queue, paged (title, added by, duration) |
 | `/music shownp` | Show now playing card (prototype feature) |
 
 ### Music Capabilities
@@ -24,18 +25,16 @@ Chisa is a multi-purpose Discord bot providing music playback, currency conversi
 - ✅ Search by song name (uses YouTube search)
 - ✅ Queue management (automatic queue progression)
 - ✅ Interactive search results with pagination
-- ✅ Playlist support (add entire playlists)
+- ✅ Playlist URL support: `/music play <playlist URL>` queues up to 100 videos and replies with one summary card (count + total duration). A private or missing playlist is reported instead of failing silently. A `watch?v=X&list=Y` URL plays that single video.
 - ✅ Track information display (title, artist, duration)
-- ✅ Multiple Lavalink node support for reliability
-- ✅ Auto-reconnection if node fails
-- ✅ Voice channel auto-join when playing
+- ✅ Auto-disconnect after 10 minutes of inactivity
+- ✅ Lazy voice join: `/music play <query>` only joins once the track actually starts
 
 ### Technical Features
-- Lavalink integration for high-quality audio
-- Disgolink library for Lavalink communication
-- Multiple node load balancing
-- Track event handling (start, end, stuck, exception)
-- WebSocket connection management
+- yt-dlp for audio extraction and YouTube metadata (no external audio server)
+- ffmpeg transcoding to Opus, streamed over a direct Discord voice connection
+- Pause/resume by signalling the yt-dlp and ffmpeg child processes
+- Optional SOCKS proxy for yt-dlp via `PROXY_URL`
 
 ---
 
@@ -141,10 +140,14 @@ Chisa is a multi-purpose Discord bot providing music playback, currency conversi
 
 ### Core Dependencies
 - **discordgo** (v0.28.1) - Discord API wrapper
-- **disgolink** (v3.0.4) - Lavalink client (custom fork)
 - **go-redis** (v9.7.3) - Redis client
 - **gocron** (v2.16.1) - Cron job scheduler
 - **godotenv** (v1.5.1) - Environment configuration
+- **jonas747/ogg** - Ogg/Opus decoder for the voice stream
+
+### External Binaries
+- **yt-dlp** - YouTube search, metadata, and audio extraction
+- **ffmpeg** - Transcoder to Ogg/Opus
 
 ### Graphics & Rendering
 - **gg** (v1.3.0) - 2D graphics library
@@ -194,7 +197,7 @@ Chisa is a multi-purpose Discord bot providing music playback, currency conversi
 ### Requirements
 - Go 1.23+
 - Redis server
-- Lavalink server(s)
+- ffmpeg and yt-dlp on the host (or bundled at `./bin/yt-dlp`)
 - Discord bot token
 - Currency API token or Wise API token
 
@@ -205,6 +208,8 @@ AKASHIC_SERVER_ID=         # Guild ID for registration
 REDIS_URL=                 # Redis connection string
 WISE_TOKEN=                # Wise API token (for currency)
 CURRENCY_API_TOKEN=        # Alternative currency provider
+PROXY_URL=                 # Optional SOCKS proxy for yt-dlp
+YTDLP_PATH=                # Path to yt-dlp binary (default: ./bin/yt-dlp)
 ```
 
 ### Running

@@ -3,17 +3,14 @@ package music
 import "time"
 
 const (
-	// Connection and Timeout Configuration
-	// NodeConnectionTimeout is the maximum time to wait when connecting to a lavalink node
-	NodeConnectionTimeout = 10 * time.Second
-
 	// Time Conversion Constants
-	// MillisecondsPerSecond is used to convert milliseconds to seconds
-	MillisecondsPerSecond = 1000
 	// SecondsPerMinute is used to convert seconds to minutes
 	SecondsPerMinute = 60
 	// MinutesPerHour is used to convert minutes to hours (not currently used but good to have)
 	MinutesPerHour = 60
+
+	// ResolveTimeout bounds a single Resolve call (yt-dlp search or a URL probe).
+	ResolveTimeout = 20 * time.Second
 
 	// Search Configuration
 	// MaxSearchResults is the maximum number of search results to return from a search query
@@ -21,35 +18,27 @@ const (
 	// SearchResultsPerPage is the number of search results to display per page
 	SearchResultsPerPage = 5
 
+	// Playlist Configuration
+	// PlaylistResolveTimeout bounds a playlist extraction. It is far larger than
+	// ResolveTimeout because yt-dlp walks every entry of the playlist. The
+	// number of tracks one playlist may queue is capped by
+	// providers.ytdlpPlaylistLimit, applied where the extraction happens.
+	PlaylistResolveTimeout = 60 * time.Second
+
 	// Queue Configuration
 	// InitialQueueCapacity is the initial capacity when creating a new queue slice
 	InitialQueueCapacity = 0
-	// InitialLastPosition indicates that no track has been played yet
-	InitialLastPosition = -1
-	// FirstQueueIndex is the index of the first track in the queue
-	FirstQueueIndex = 0
-	// SecondQueueIndex is the index of the second track in the queue
-	SecondQueueIndex = 1
-	// QueueOffsetForLength represents the offset to calculate the actual queue length
-	// (current track is not counted in queue length display)
-	QueueOffsetForLength = 1
 
 	// Pagination Configuration
 	// InitialPage is the starting page number for search results
 	InitialPage = 1
 
-	// Wait/Sleep Durations
-	// InteractionResponseDelay is the delay before sending an interaction response
-	// This gives Discord time to process the deferred response
-	InteractionResponseDelay = 500 * time.Millisecond
-
-	// Search Cache Configuration
-	// SearchCacheCleanupInterval is how often to check for expired search cache entries
-	SearchCacheCleanupInterval = 1 * time.Minute
-	// SearchCacheExpiryDuration is how long a search cache entry is valid
-	SearchCacheExpiryDuration = 1 * time.Minute
-
-	// WaitGroup Configuration
-	// WaitGroupIncrement is the number to add to wait group when adding a goroutine
-	WaitGroupIncrement = 1
+	// Queue List / Idle Configuration
+	// QueueResultsPerPage is the number of queued tracks shown per /music list page
+	QueueResultsPerPage = 10
+	// AutoDisconnectDelay is how long the bot stays in the voice channel after
+	// the queue empties. Change this value to tune the idle timeout; the
+	// user-facing "No Activity" message is generated from it, so the text stays
+	// correct.
+	AutoDisconnectDelay = 10 * time.Minute
 )

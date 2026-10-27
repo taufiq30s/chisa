@@ -20,6 +20,9 @@ var (
 )
 
 func loadFile() {
+	if err := os.MkdirAll("logs", 0o755); err != nil {
+		log.Fatal(err)
+	}
 	infoFile, err = os.OpenFile("logs/info.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, FilePermissionReadWrite)
 	if err != nil {
 		log.Fatal(err)
