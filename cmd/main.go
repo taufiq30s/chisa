@@ -43,6 +43,8 @@ func main() {
 
 	// Connect to Discord and start cron jobs.
 	chisa.Start(cfg.BotToken, cfg.GuildID)
+	moderation.SetRedis(chisa.Redis)
+	go moderation.ReplayPendingVerifications(chisa.Session)
 
 	// Initialize features and register Discord handlers.
 	registry := handlers.NewRegistry(chisa)

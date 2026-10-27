@@ -97,6 +97,14 @@ func (r *interactionResponse) Defer() error {
 	return err
 }
 
+// DeferUpdate acknowledges a component interaction without changing the
+// message yet. Follow up with SendDefer/ExecuteDefer.
+func (r *interactionResponse) DeferUpdate() error {
+	return r.session.InteractionRespond(r.interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	})
+}
+
 func (r *interactionResponse) Send() error {
 	if r.err != nil && r.embed != nil {
 		r.embed.Color = 0xc30010
