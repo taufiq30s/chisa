@@ -10,12 +10,6 @@ RUN go mod download
 # Copy source
 COPY . .
 
-# In CI, lavalink_nodes.json may be absent because it is gitignored.
-# Fallback to the committed backup so runtime COPY does not fail.
-RUN if [ ! -f /app/lavalink_nodes.json ] && [ -f /app/lavalink_nodes.json.backup ]; then \
-			cp /app/lavalink_nodes.json.backup /app/lavalink_nodes.json; \
-		fi
-
 ENV GOARCH=arm64 GOOS=linux CGO_ENABLED=0
 
 RUN go build -trimpath -ldflags="-s -w" -o chisa ./cmd
