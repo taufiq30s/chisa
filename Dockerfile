@@ -24,9 +24,15 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 # that YouTube breaks within weeks, and yt-dlp advises against self-updating
 # packaged installs. `latest/download` tracks releases, SHA2-256SUMS keeps the
 # download honest.
+#
+# The bgutil PO token plugin is the one exception: it is a zipapp we cannot
+# checksum against an upstream manifest, so it is pinned by version instead.
 FROM alpine:3.24 AS ytdlp
 
-RUN apk add --no-cache ca-certificates curl
+# Keep this in step with the server tag in docker-compose.yml / README.
+ARG BGUTIL_VERSION=2.0.2
+
+RUN apk add --no-cache ca-certificates curl unzip
 
 ARG TARGETARCH
 RUN set -eu; \
@@ -42,7 +48,13 @@ RUN set -eu; \
     [ -n "$hash" ] || { echo "no checksum published for $asset" >&2; exit 1; }; \
     echo "$hash  /yt-dlp" | sha256sum -c -; \
     chmod +x /yt-dlp; \
-    rm /sums
+    rm /sums; \
+    mkdir -p /plugins/bgutil/yt_dlp_plugins; \
+    curl -fsSL -o /tmp/bgutil.zip \
+        "https://github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/download/${BGUTIL_VERSION}/bgutil-ytdlp-pot-provider.zip"; \
+    unzip -q -o /tmp/bgutil.zip -d /plugins/bgutil; \
+    rm /tmp/bgutil.zip; \
+    test -f /plugins/bgutil/yt_dlp_plugins/extractor/getpot_bgutil_http.py
 
 # ── Stage 3: runtime ─────────────────────────────────────────────────────────
 FROM alpine:3.24
@@ -58,6 +70,10 @@ COPY --from=ytdlp /yt-dlp ./bin/yt-dlp
 
 # yt-dlp scans <exe-dir>/yt-dlp-plugins/<name>/yt_dlp_plugins/ with no flag, so
 # a host directory mounted here is picked up without a Go change or rebuild.
-RUN chmod +x chisa bin/yt-dlp && mkdir -p logs bin/yt-dlp-plugins
+# The bgutil PO token plugin ships here by default; a host mount replaces the
+# whole directory, so any plugin added on the host must include it too.
+COPY --from=ytdlp /plugins/bgutil ./bin/yt-dlp-plugins/bgutil
+
+RUN chmod +x chisa bin/yt-dlp && mkdir -p logs
 
 CMD ["./chisa"]
