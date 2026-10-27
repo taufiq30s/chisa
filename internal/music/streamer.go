@@ -100,7 +100,8 @@ func (s *Streamer) Play(ctx context.Context, track model.Track) error {
 
 	ytdlpBinary := providers.FindYtdlpBinary()
 
-	ytdlpArgs := []string{
+	ytdlpArgs := providers.CommonArgs()
+	ytdlpArgs = append(ytdlpArgs,
 		"--no-playlist",
 		"-f", "bestaudio[abr<=128]/bestaudio",
 		"-o", "-",
@@ -113,7 +114,7 @@ func (s *Streamer) Play(ctx context.Context, track model.Track) error {
 		"--extractor-retries", "5",
 		"--no-check-certificates",
 		"--buffer-size", "16K",
-	}
+	)
 	if s.proxy != "" {
 		ytdlpArgs = append(ytdlpArgs, "--proxy", s.proxy)
 	}

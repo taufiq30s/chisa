@@ -51,6 +51,24 @@ func FindYtdlpBinary() string {
 	return "yt-dlp"
 }
 
+// CommonArgs are the flags every invocation needs. They live in one place so
+// search and playback cannot drift apart: search builds the watch URL that
+// playback later fetches, and a PO token obtained by one is reusable by the
+// other only if both ask for it.
+//
+// The bgutil PO token provider is what stops YouTube serving 403 on playback.
+// yt-dlp defaults the plugin to http://127.0.0.1:4416, which is never right in a
+// container, so the URL is explicit. YOUTUBE_POT_URL is optional: when it is
+// unset the flag is omitted and yt-dlp falls back to its own PO token handling,
+// which is enough for search but usually fails for playback.
+func CommonArgs() []string {
+	args := []string{"--no-warnings"}
+	if potURL, err := utils.GetEnv("YOUTUBE_POT_URL"); err == nil && potURL != "" {
+		args = append(args, "--extractor-args", "youtubepot-bgutilhttp:base_url="+potURL)
+	}
+	return args
+}
+
 // ytdlpEntry is one item of yt-dlp's JSON. Only the fields we consume are
 // declared; yt-dlp emits dozens more and json ignores them.
 type ytdlpEntry struct {
@@ -151,13 +169,14 @@ func trackFromEntry(e ytdlpEntry) model.Track {
 // yt-dlp writes Python deprecation warnings there on success, and mixing them
 // into stdout would break the JSON decode.
 func runYtdlp(ctx context.Context, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, FindYtdlpBinary(), args...)
+	full := append(CommonArgs(), args...)
+	cmd := exec.CommandContext(ctx, FindYtdlpBinary(), full...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("yt-dlp %v: %w: %s", args, err, stderr.String())
+		return nil, fmt.Errorf("yt-dlp %v: %w: %s", full, err, stderr.String())
 	}
 	return stdout.Bytes(), nil
 }
@@ -174,7 +193,6 @@ func searchViaYtDlp(ctx context.Context, query string, limit int) ([]model.Track
 		fmt.Sprintf("ytsearch%d:%s", limit, query),
 		"--dump-single-json",
 		"--flat-playlist",
-		"--no-warnings",
 	)
 	if err != nil {
 		return nil, err
@@ -205,7 +223,7 @@ func tracksFromEntries(entries []ytdlpEntry) []model.Track {
 // that reports the duration without an API call, and it follows redirects and
 // short (youtu.be) links for free.
 func resolveURLViaYtDlp(ctx context.Context, videoURL string) (model.Track, error) {
-	out, err := runYtdlp(ctx, videoURL, "--dump-single-json", "--no-warnings")
+	out, err := runYtdlp(ctx, videoURL, "--dump-single-json")
 	if err != nil {
 		return model.Track{}, err
 	}
@@ -239,7 +257,6 @@ func playlistViaYtDlp(ctx context.Context, playlistURL string, limit int) ([]mod
 		"--dump-single-json",
 		"--flat-playlist",
 		fmt.Sprintf("--playlist-end=%d", limit),
-		"--no-warnings",
 	)
 	if err != nil {
 		return nil, mapPlaylistError(err)
